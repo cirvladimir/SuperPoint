@@ -86,14 +86,14 @@ def _cli_train(config, output_dir, args):
 
     with open(os.path.join(output_dir, 'config.yml'), 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
-        
+
     if args.pretrained_model is not None:
         pretrained_dir = os.path.join(EXPER_PATH, args.pretrained_model)
         if not os.path.exists(pretrained_dir):
             raise ValueError("Missing pretrained model: " + pretrained_dir)
     else:
         pretrained_dir = None
-        
+
     train(config, config['train_iter'], output_dir, pretrained_dir)
 
     if args.eval:
