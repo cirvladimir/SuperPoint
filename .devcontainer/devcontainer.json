@@ -1,13 +1,16 @@
 {
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "mounts": [
-    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind"
-  ],
-  "customizations": {
-    "vscode": {
-      "extensions": []
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "mounts": [
+        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind"
+    ],
+    "containerEnv": {
+        "PYTHONPATH": "/workspaces/SuperPoint"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": []
+        }
     }
-  }
 }
