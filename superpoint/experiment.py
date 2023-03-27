@@ -54,7 +54,7 @@ def predict(config, output_dir, n_iter):
 
 
 def set_seed(seed):
-    tf.set_random_seed(seed)
+    tf.random.set_seed(seed)
     np.random.seed(seed)
 
 
@@ -70,8 +70,8 @@ def _init_graph(config, with_dataset=False):
 
     dataset = get_dataset(config['data']['name'])(**config['data'])
     model = get_model(config['model']['name'])(
-            data={} if with_dataset else dataset.get_tf_datasets(),
-            n_gpus=n_gpus, **config['model'])
+        data={} if with_dataset else dataset.get_tf_datasets(),
+        n_gpus=n_gpus, **config['model'])
     model.__enter__()
     if with_dataset:
         yield model, dataset
@@ -137,20 +137,20 @@ if __name__ == '__main__':
     p_train.set_defaults(func=_cli_train)
 
     # Evaluation command
-    p_train = subparsers.add_parser('evaluate')
-    p_train.add_argument('config', type=str)
-    p_train.add_argument('exper_name', type=str)
-    p_train.set_defaults(func=_cli_eval)
+    p_evaluate = subparsers.add_parser('evaluate')
+    p_evaluate.add_argument('config', type=str)
+    p_evaluate.add_argument('exper_name', type=str)
+    p_evaluate.set_defaults(func=_cli_eval)
 
     # Inference command
-    p_train = subparsers.add_parser('predict')
-    p_train.add_argument('config', type=str)
-    p_train.add_argument('exper_name', type=str)
-    p_train.set_defaults(func=_cli_pred)
+    p_predict = subparsers.add_parser('predict')
+    p_predict.add_argument('config', type=str)
+    p_predict.add_argument('exper_name', type=str)
+    p_predict.set_defaults(func=_cli_pred)
 
     args = parser.parse_args()
     with open(args.config, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.load(f, yaml.FullLoader)
     output_dir = os.path.join(EXPER_PATH, args.exper_name)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
