@@ -57,7 +57,7 @@ class PatchesDataset(BaseDataset):
             if config['preprocessing']['resize']:
                 image = pipeline.ratio_preserving_resize(image,
                                                          **config['preprocessing'])
-            return tf.to_float(image)
+            return tf.cast(image, tf.float32)
 
         def _adapt_homography_to_preprocessing(zip_data):
             H = tf.cast(zip_data['homography'], tf.float32)
@@ -75,22 +75,23 @@ class PatchesDataset(BaseDataset):
             down_scale = tf.diag(tf.stack([warped_s, warped_s, tf.constant(1.)]))
 
             # Compute the translation due to the crop for both images
-            pad_y = tf.to_int32(
-                ((source_size[0] * s - target_size[0]) / tf.constant(2.0)))
-            pad_x = tf.to_int32(
-                ((source_size[1] * s - target_size[1]) / tf.constant(2.0)))
+            pad_y = tf.cast(
+                ((source_size[0] * s - target_size[0]) / tf.constant(2.0)), tf.int32)
+            pad_x = tf.cast(
+                ((source_size[1] * s - target_size[1]) / tf.constant(2.0)), tf.int32)
             translation = tf.stack([tf.constant(1), tf.constant(0), pad_x,
                                     tf.constant(0), tf.constant(1), pad_y,
                                     tf.constant(0), tf.constant(0), tf.constant(1)])
-            translation = tf.to_float(tf.reshape(translation, [3, 3]))
-            pad_y = tf.to_int32(((source_warped_size[0] * warped_s - target_size[0])
-                                 / tf.constant(2.0)))
-            pad_x = tf.to_int32(((source_warped_size[1] * warped_s - target_size[1])
-                                 / tf.constant(2.0)))
+            translation = tf.cast(tf.reshape(translation, [3, 3]), tf.float32)
+            pad_y = tf.cast(((source_warped_size[0] * warped_s - target_size[0])
+                             / tf.constant(2.0)), tf.int32)
+            pad_x = tf.cast(((source_warped_size[1] * warped_s - target_size[1])
+                             / tf.constant(2.0)), tf.int32)
             warped_translation = tf.stack([tf.constant(1), tf.constant(0), -pad_x,
                                            tf.constant(0), tf.constant(1), -pad_y,
                                            tf.constant(0), tf.constant(0), tf.constant(1)])
-            warped_translation = tf.to_float(tf.reshape(warped_translation, [3, 3]))
+            warped_translation = tf.cast(tf.reshape(
+                warped_translation, [3, 3]), tf.float32)
 
             H = warped_translation @ down_scale @ H @ up_scale @ translation
             return H
@@ -116,8 +117,8 @@ class PatchesDataset(BaseDataset):
         images = images.map(_preprocess)
         warped_images = warped_images.map(_preprocess)
 
-        images = images.map(lambda img: tf.to_float(img) / 255.)
-        warped_images = warped_images.map(lambda img: tf.to_float(img) / 255.)
+        images = images.map(lambda img: tf.cast(img, tf.float32) / 255.)
+        warped_images = warped_images.map(lambda img: tf.cast(img, tf.float32) / 255.)
 
         data = tf.data.Dataset.zip({'image': images, 'warped_image': warped_images,
                                     'homography': homographies})

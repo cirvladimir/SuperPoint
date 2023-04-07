@@ -65,10 +65,10 @@ def homography_adaptation(image, net, config):
                 cv.MORPH_ELLIPSE, (config['valid_border_margin'] * 2,) * 2)
             with tf.device('/cpu:0'):
                 count = tf.nn.erosion2d(
-                    count, tf.to_float(tf.constant(kernel)[..., tf.newaxis]),
+                    count, tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
                     [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[..., 0] + 1.
                 mask = tf.nn.erosion2d(
-                    mask, tf.to_float(tf.constant(kernel)[..., tf.newaxis]),
+                    mask, tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
                     [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[..., 0] + 1.
 
         # Predict detection probabilities
@@ -217,7 +217,7 @@ def sample_homography(
         pts2 = rotated[idx]
 
     # Rescale to actual size
-    shape = tf.to_float(shape[::-1])  # different convention [y, x]
+    shape = tf.cast(shape[::-1], tf.float32)  # different convention [y, x]
     pts1 *= tf.expand_dims(shape, axis=0)
     pts2 *= tf.expand_dims(shape, axis=0)
 
@@ -274,9 +274,9 @@ def compute_valid_mask(image_shape, homography, erosion_radius=0):
         kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (erosion_radius * 2,) * 2)
         mask = tf.nn.erosion2d(
             mask[tf.newaxis, ..., tf.newaxis],
-            tf.to_float(tf.constant(kernel)[..., tf.newaxis]),
+            tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
             [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[0, ..., 0] + 1.
-    return tf.to_int32(mask)
+    return tf.cast(mask, tf.int32)
 
 
 def warp_points(points, homography):
@@ -309,7 +309,7 @@ def warp_points(points, homography):
 
 def filter_points(points, shape):
     with tf.name_scope('filter_points'):
-        mask = (points >= 0) & (points <= tf.to_float(shape - 1))
+        mask = (points >= 0) & (points <= tf.cast(shape - 1, tf.float32))
         return tf.boolean_mask(points, tf.reduce_all(mask, -1))
 
 
@@ -359,7 +359,7 @@ def warp_keypoints_to_map(packed_arg):
 
     Returns: a map of keypoints of the same size as the original keypoint_map.
     """
-    warped_keypoints = tf.to_int32(warp_keypoints_to_list(packed_arg))
+    warped_keypoints = tf.cast(warp_keypoints_to_list(packed_arg), tf.int32)
     n_keypoints = tf.shape(warped_keypoints)[0]
     shape = tf.shape(packed_arg[0])
 

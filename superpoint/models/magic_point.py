@@ -43,7 +43,7 @@ class MagicPoint(BaseModel):
                                                min_prob=config['detection_threshold'],
                                                keep_top_k=config['top_k']), prob)
             outputs['prob_nms'] = prob
-        pred = tf.to_int32(tf.greater_equal(prob, config['detection_threshold']))
+        pred = tf.cast(tf.greater_equal(prob, config['detection_threshold']), tf.int32)
         outputs['pred'] = pred
 
         return outputs

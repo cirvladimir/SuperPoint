@@ -214,6 +214,6 @@ class SyntheticShapes(BaseDataset):
         # Convert the point coordinates to a dense keypoint map
         data = data.map_parallel(pipeline.add_keypoint_map)
         data = data.map_parallel(
-            lambda d: {**d, 'image': tf.to_float(d['image']) / 255.})
+            lambda d: {**d, 'image': tf.cast(d['image'], tf.float32) / 255.})
 
         return data

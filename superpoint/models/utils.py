@@ -53,7 +53,7 @@ def descriptor_head(inputs, **config):
 
 def detector_loss(keypoint_map, logits, valid_mask=None, **config):
     # Convert the boolean labels to indices including the "no interest point" dustbin
-    labels = tf.to_float(keypoint_map[..., tf.newaxis])  # for GPU
+    labels = tf.cast(keypoint_map[..., tf.newaxis], tf.float32)  # for GPU
     labels = tf.space_to_depth(labels, config['grid_size'])
     shape = tf.concat([tf.shape(labels)[:3], [1]], axis=0)
     labels = tf.concat([2 * labels, tf.ones(shape)], 3)
@@ -63,7 +63,7 @@ def detector_loss(keypoint_map, logits, valid_mask=None, **config):
 
     # Mask the pixels if bordering artifacts appear
     valid_mask = tf.ones_like(keypoint_map) if valid_mask is None else valid_mask
-    valid_mask = tf.to_float(valid_mask[..., tf.newaxis])  # for GPU
+    valid_mask = tf.cast(valid_mask[..., tf.newaxis], tf.float32)  # for GPU
     valid_mask = tf.space_to_depth(valid_mask, config['grid_size'])
     valid_mask = tf.reduce_prod(valid_mask, axis=3)  # AND along the channel dim
 
@@ -75,7 +75,7 @@ def detector_loss(keypoint_map, logits, valid_mask=None, **config):
 def descriptor_loss(descriptors, warped_descriptors, homographies,
                     valid_mask=None, **config):
     # Compute the position of the center pixel of every cell in the image
-    (batch_size, Hc, Wc) = tf.unstack(tf.to_int32(tf.shape(descriptors)[:3]))
+    (batch_size, Hc, Wc) = tf.unstack(tf.cast(tf.shape(descriptors)[:3], tf.int32))
     coord_cells = tf.stack(tf.meshgrid(
         tf.range(Hc), tf.range(Wc), indexing='ij'), axis=-1)
     coord_cells = coord_cells * config['grid_size'] + \
@@ -91,11 +91,11 @@ def descriptor_loss(descriptors, warped_descriptors, homographies,
     # Compute the pairwise distances and filter the ones less than a threshold
     # The distance is just the pairwise norm of the difference of the two grids
     # Using shape broadcasting, cell_distances has shape (N, Hc, Wc, Hc, Wc)
-    coord_cells = tf.to_float(tf.reshape(coord_cells, [1, 1, 1, Hc, Wc, 2]))
+    coord_cells = tf.cast(tf.reshape(coord_cells, [1, 1, 1, Hc, Wc, 2]), tf.float32)
     warped_coord_cells = tf.reshape(warped_coord_cells,
                                     [batch_size, Hc, Wc, 1, 1, 2])
     cell_distances = tf.norm(coord_cells - warped_coord_cells, axis=-1)
-    s = tf.to_float(tf.less_equal(cell_distances, config['grid_size'] - 0.5))
+    s = tf.cast(tf.less_equal(cell_distances, config['grid_size'] - 0.5), tf.float32)
     # s[id_batch, h, w, h', w'] == 1 if the point of coordinates (h, w) warped by the
     # homography is at a distance from (h', w') less than config['grid_size']
     # and 0 otherwise
@@ -129,12 +129,12 @@ def descriptor_loss(descriptors, warped_descriptors, homographies,
                           Hc * config['grid_size'],
                           Wc * config['grid_size']], tf.float32)\
         if valid_mask is None else valid_mask
-    valid_mask = tf.to_float(valid_mask[..., tf.newaxis])  # for GPU
+    valid_mask = tf.cast(valid_mask[..., tf.newaxis], tf.float32)  # for GPU
     valid_mask = tf.space_to_depth(valid_mask, config['grid_size'])
     valid_mask = tf.reduce_prod(valid_mask, axis=3)  # AND along the channel dim
     valid_mask = tf.reshape(valid_mask, [batch_size, 1, 1, Hc, Wc])
 
-    normalization = tf.reduce_sum(valid_mask) * tf.to_float(Hc * Wc)
+    normalization = tf.reduce_sum(valid_mask) * tf.cast(Hc * Wc, tf.float32)
     # Summaries for debugging
     # tf.summary.scalar('nb_positive', tf.reduce_sum(valid_mask * s) / normalization)
     # tf.summary.scalar('nb_negative', tf.reduce_sum(valid_mask * (1 - s)) / normalization)
@@ -177,10 +177,10 @@ def box_nms(prob, size, iou=0.1, min_prob=0.01, keep_top_k=0):
         keep_top_k: an integer, the number of top scores to keep.
     """
     with tf.name_scope('box_nms'):
-        pts = tf.to_float(tf.where(tf.greater_equal(prob, min_prob)))
+        pts = tf.cast(tf.where(tf.greater_equal(prob, min_prob)), tf.float32)
         size = tf.constant(size / 2.)
         boxes = tf.concat([pts - size, pts + size], axis=1)
-        scores = tf.gather_nd(prob, tf.to_int32(pts))
+        scores = tf.gather_nd(prob, tf.cast(pts, tf.int32))
         with tf.device('/cpu:0'):
             indices = tf.image.non_max_suppression(
                 boxes, scores, tf.shape(boxes)[0], iou)
@@ -190,5 +190,5 @@ def box_nms(prob, size, iou=0.1, min_prob=0.01, keep_top_k=0):
             k = tf.minimum(tf.shape(scores)[0], tf.constant(keep_top_k))  # when fewer
             scores, indices = tf.nn.top_k(scores, k)
             pts = tf.gather(pts, indices)
-        prob = tf.scatter_nd(tf.to_int32(pts), scores, tf.shape(prob))
+        prob = tf.scatter_nd(tf.cast(pts, tf.int32), scores, tf.shape(prob))
     return prob

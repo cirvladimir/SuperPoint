@@ -65,7 +65,7 @@ def add_dummy_valid_mask(data):
 def add_keypoint_map(data):
     with tf.name_scope('add_keypoint_map'):
         image_shape = tf.shape(data['image'])[:2]
-        kp = tf.minimum(tf.to_int32(tf.round(data['keypoints'])), image_shape - 1)
+        kp = tf.minimum(tf.cast(tf.round(data['keypoints']), tf.int32), image_shape - 1)
         kmap = tf.scatter_nd(
             kp, tf.ones([tf.shape(kp)[0]], dtype=tf.int32), image_shape)
     return {**data, 'keypoint_map': kmap}
@@ -93,8 +93,8 @@ def downsample(image, coordinates, **config):
 
 def ratio_preserving_resize(image, **config):
     target_size = tf.convert_to_tensor(config['resize'])
-    scales = tf.to_float(tf.divide(target_size, tf.shape(image)[:2]))
-    new_size = tf.to_float(tf.shape(image)[:2]) * tf.reduce_max(scales)
-    image = tf.image.resize(image, tf.to_int32(new_size),
+    scales = tf.cast(tf.divide(target_size, tf.shape(image)[:2]), tf.float32)
+    new_size = tf.cast(tf.shape(image)[:2], tf.float32) * tf.reduce_max(scales)
+    image = tf.image.resize(image, tf.cast(new_size, tf.int32),
                             method=tf.image.ResizeMethod.BILINEAR)
     return tf.image.resize_with_crop_or_pad(image, target_size[0], target_size[1])
