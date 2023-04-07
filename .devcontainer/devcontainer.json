@@ -3,7 +3,8 @@
         "dockerfile": "Dockerfile"
     },
     "mounts": [
-        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind"
+        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind",
+        "source=superpoint-bashhistory,target=/commandhistory,type=volume"
     ],
     "containerEnv": {
         "PYTHONPATH": "/workspaces/SuperPoint"
