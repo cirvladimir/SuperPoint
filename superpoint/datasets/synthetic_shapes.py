@@ -6,6 +6,7 @@ import tarfile
 from pathlib import Path
 from tqdm import tqdm
 import shutil
+import logging
 
 from .base_dataset import BaseDataset
 from superpoint.datasets import synthetic_dataset
@@ -70,7 +71,7 @@ class SyntheticShapes(BaseDataset):
     def dump_primitive_data(self, primitive, tar_path, config):
         temp_dir = Path(os.environ['TMPDIR'], primitive)
 
-        tf.logging.info('Generating tarfile for primitive {}.'.format(primitive))
+        logging.info('Generating tarfile for primitive {}.'.format(primitive))
         synthetic_dataset.set_random_state(np.random.RandomState(
                 config['generation']['random_seed']))
         for split, size in self.config['generation']['split_sizes'].items():
@@ -101,7 +102,7 @@ class SyntheticShapes(BaseDataset):
         tar.add(temp_dir, arcname=primitive)
         tar.close()
         shutil.rmtree(temp_dir)
-        tf.logging.info('Tarfile dumped to {}.'.format(tar_path))
+        logging.info('Tarfile dumped to {}.'.format(tar_path))
 
     def _init_dataset(self, **config):
         # Parse drawing primitives
@@ -126,7 +127,7 @@ class SyntheticShapes(BaseDataset):
                 self.dump_primitive_data(primitive, tar_path, config)
 
             # Untar locally
-            tf.logging.info('Extracting archive for primitive {}.'.format(primitive))
+            logging.info('Extracting archive for primitive {}.'.format(primitive))
             tar = tarfile.open(tar_path)
             temp_dir = Path(os.environ['TMPDIR'])
             tar.extractall(path=temp_dir)
@@ -198,7 +199,7 @@ class SyntheticShapes(BaseDataset):
         data = data.map(pipeline.add_dummy_valid_mask)
 
         if config['cache_in_memory'] and not config['on-the-fly']:
-            tf.logging.info('Caching data, fist access will take some time.')
+            logging.info('Caching data, fist access will take some time.')
             data = data.cache()
 
         # Apply augmentation

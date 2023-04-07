@@ -18,9 +18,9 @@ def _scale_preserving_resize(image):
     target_size = tf.convert_to_tensor(config['preprocessing']['resize'])
     scales = tf.to_float(tf.divide(target_size, tf.shape(image)[:2]))
     new_size = tf.to_float(tf.shape(image)[:2]) * tf.reduce_max(scales)
-    image = tf.image.resize_images(image, tf.to_int32(new_size),
-                                   method=tf.image.ResizeMethod.BILINEAR)
-    return tf.image.resize_image_with_crop_or_pad(image, target_size[0],
+    image = tf.image.resize(image, tf.to_int32(new_size),
+                            method=tf.image.ResizeMethod.BILINEAR)
+    return tf.image.resize_with_crop_or_pad(image, target_size[0],
                                                   target_size[1])
 
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     patch_ratio = config['homographies']['patch_ratio']
     new_shape = tf.multiply(tf.cast(shape, tf.float32), patch_ratio)
     new_shape = tf.cast(new_shape, tf.int32)
-    warped_image = tf.image.resize_images(warped_image, new_shape)
+    warped_image = tf.image.resize(warped_image, new_shape)
     H = invert_homography(H)
     H = flat2mat(H)[0, :, :]
 

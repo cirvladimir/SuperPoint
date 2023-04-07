@@ -9,7 +9,7 @@ from superpoint.models.homographies import (sample_homography, compute_valid_mas
 
 def parse_primitives(names, all_primitives):
     p = all_primitives if (names == 'all') \
-            else (names if isinstance(names, list) else [names])
+        else (names if isinstance(names, list) else [names])
     assert set(p) <= set(all_primitives)
     return p
 
@@ -18,7 +18,7 @@ def photometric_augmentation(data, **config):
     with tf.name_scope('photometric_augmentation'):
         primitives = parse_primitives(config['primitives'], photaug.augmentations)
         prim_configs = [config['params'].get(
-                             p, {}) for p in primitives]
+            p, {}) for p in primitives]
 
         indices = tf.range(len(primitives))
         if config['random_order']:
@@ -42,7 +42,7 @@ def homographic_augmentation(data, add_homography=False, **config):
         image_shape = tf.shape(data['image'])[:2]
         homography = sample_homography(image_shape, **config['params'])[0]
         warped_image = tf.contrib.image.transform(
-                data['image'], homography, interpolation='BILINEAR')
+            data['image'], homography, interpolation='BILINEAR')
         valid_mask = compute_valid_mask(image_shape, homography,
                                         config['valid_border_margin'])
 
@@ -67,7 +67,7 @@ def add_keypoint_map(data):
         image_shape = tf.shape(data['image'])[:2]
         kp = tf.minimum(tf.to_int32(tf.round(data['keypoints'])), image_shape-1)
         kmap = tf.scatter_nd(
-                kp, tf.ones([tf.shape(kp)[0]], dtype=tf.int32), image_shape)
+            kp, tf.ones([tf.shape(kp)[0]], dtype=tf.int32), image_shape)
     return {**data, 'keypoint_map': kmap}
 
 
@@ -85,8 +85,8 @@ def downsample(image, coordinates, **config):
     with tf.name_scope('downsample'):
         ratio = tf.divide(tf.convert_to_tensor(config['resize']), tf.shape(image)[0:2])
         coordinates = coordinates * tf.cast(ratio, tf.float32)
-        image = tf.image.resize_images(image, config['resize'],
-                                       method=tf.image.ResizeMethod.BILINEAR)
+        image = tf.image.resize(image, config['resize'],
+                                method=tf.image.ResizeMethod.BILINEAR)
 
     return image, coordinates
 
@@ -95,6 +95,6 @@ def ratio_preserving_resize(image, **config):
     target_size = tf.convert_to_tensor(config['resize'])
     scales = tf.to_float(tf.divide(target_size, tf.shape(image)[:2]))
     new_size = tf.to_float(tf.shape(image)[:2]) * tf.reduce_max(scales)
-    image = tf.image.resize_images(image, tf.to_int32(new_size),
-                                   method=tf.image.ResizeMethod.BILINEAR)
-    return tf.image.resize_image_with_crop_or_pad(image, target_size[0], target_size[1])
+    image = tf.image.resize(image, tf.to_int32(new_size),
+                            method=tf.image.ResizeMethod.BILINEAR)
+    return tf.image.resize_with_crop_or_pad(image, target_size[0], target_size[1])

@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from pathlib import Path
+import logging
 
 from .base_dataset import BaseDataset
 from .utils import pipeline
@@ -55,7 +56,7 @@ class Coco(BaseDataset):
             files['label_paths'] = label_paths
 
         tf.data.Dataset.map_parallel = lambda self, fn: self.map(
-                fn, num_parallel_calls=config['num_parallel_calls'])
+            fn, num_parallel_calls=config['num_parallel_calls'])
 
         return files
 
@@ -91,7 +92,7 @@ class Coco(BaseDataset):
             kp = kp.map(lambda path: tf.py_func(_read_points, [path], tf.float32))
             kp = kp.map(lambda points: tf.reshape(points, [-1, 2]))
             data = tf.data.Dataset.zip((data, kp)).map(
-                    lambda d, k: {**d, 'keypoints': k})
+                lambda d, k: {**d, 'keypoints': k})
             data = data.map(pipeline.add_dummy_valid_mask)
 
         # Keep only the first elements for validation
@@ -100,7 +101,7 @@ class Coco(BaseDataset):
 
         # Cache to avoid always reading from disk
         if config['cache_in_memory']:
-            tf.logging.info('Caching data, fist access will take some time.')
+            logging.info('Caching data, fist access will take some time.')
             data = data.cache()
 
         # Generate the warped pair
