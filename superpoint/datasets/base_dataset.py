@@ -75,7 +75,7 @@ class BaseDataset(metaclass=ABCMeta):
             A generator of elements from the training set as dictionaries mapping
             component names to the corresponding data (e.g. Numpy array).
         """
-        return self._get_set_generator('training')
+        return self.tf_splits['training']
 
     def get_validation_set(self):
         """Processed validation set.
@@ -84,7 +84,7 @@ class BaseDataset(metaclass=ABCMeta):
             A generator of elements from the training set as dictionaries mapping
             component names to the corresponding data (e.g. Numpy array).
         """
-        return self._get_set_generator('validation')
+        return self.tf_splits['validation']
 
     def get_test_set(self):
         """Processed test set.
@@ -93,7 +93,7 @@ class BaseDataset(metaclass=ABCMeta):
             A generator of elements from the training set as dictionaries mapping
             component names to the corresponding data (e.g. Numpy array).
         """
-        return self._get_set_generator('test')
+        return self.tf_splits['test']
 
     def __init__(self, **config):
         # Update config
@@ -102,13 +102,7 @@ class BaseDataset(metaclass=ABCMeta):
         self.dataset = self._init_dataset(**self.config)
 
         self.tf_splits = {}
-        self.tf_next = {}
         with tf.device('/cpu:0'):
             for n in self.split_names:
                 self.tf_splits[n] = self._get_data(self.dataset, n, **self.config)
-                self.tf_next[n] = self.tf_splits[n].make_one_shot_iterator().get_next()
         self.end_set = tf.errors.OutOfRangeError
-
-    def _get_set_generator(self, set_name):
-        while True:
-            yield self.sess.run(self.tf_next[set_name])
