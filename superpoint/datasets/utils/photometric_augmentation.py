@@ -4,12 +4,12 @@ import tensorflow as tf
 
 
 augmentations = [
-        'additive_gaussian_noise',
-        'additive_speckle_noise',
-        'random_brightness',
-        'random_contrast',
-        'additive_shade',
-        'motion_blur'
+    'additive_gaussian_noise',
+    'additive_speckle_noise',
+    'random_brightness',
+    'random_contrast',
+    'additive_shade',
+    'motion_blur'
 ]
 
 
@@ -24,7 +24,11 @@ def additive_speckle_noise(image, prob_range=[0.0, 0.005]):
     prob = tf.random_uniform((), *prob_range)
     sample = tf.random_uniform(tf.shape(image))
     noisy_image = tf.where(sample <= prob, tf.zeros_like(image), image)
-    noisy_image = tf.where(sample >= (1. - prob), 255.*tf.ones_like(image), noisy_image)
+    noisy_image = tf.where(
+        sample >= (
+            1. - prob),
+        255. * tf.ones_like(image),
+        noisy_image)
     return noisy_image
 
 
@@ -56,7 +60,7 @@ def additive_shade(image, nb_ellipses=20, transparency_range=[-0.5, 0.8],
         if (kernel_size % 2) == 0:  # kernel_size has to be odd
             kernel_size += 1
         mask = cv.GaussianBlur(mask.astype(np.float32), (kernel_size, kernel_size), 0)
-        shaded = img * (1 - transparency * mask[..., np.newaxis]/255.)
+        shaded = img * (1 - transparency * mask[..., np.newaxis] / 255.)
         return np.clip(shaded, 0, 255)
 
     shaded = tf.py_func(_py_additive_shade, [image], tf.float32)
@@ -69,8 +73,9 @@ def motion_blur(image, max_kernel_size=10):
     def _py_motion_blur(img):
         # Either vertial, hozirontal or diagonal blur
         mode = np.random.choice(['h', 'v', 'diag_down', 'diag_up'])
-        ksize = np.random.randint(0, (max_kernel_size+1)/2)*2 + 1  # make sure is odd
-        center = int((ksize-1)/2)
+        ksize = np.random.randint(0, (max_kernel_size + 1) /
+                                  2) * 2 + 1  # make sure is odd
+        center = int((ksize - 1) / 2)
         kernel = np.zeros((ksize, ksize))
         if mode == 'h':
             kernel[center, :] = 1.
@@ -82,7 +87,8 @@ def motion_blur(image, max_kernel_size=10):
             kernel = np.flip(np.eye(ksize), 0)
         var = ksize * ksize / 16.
         grid = np.repeat(np.arange(ksize)[:, np.newaxis], ksize, axis=-1)
-        gaussian = np.exp(-(np.square(grid-center)+np.square(grid.T-center))/(2.*var))
+        gaussian = np.exp(-(np.square(grid - center) +
+                          np.square(grid.T - center)) / (2. * var))
         kernel *= gaussian
         kernel /= np.sum(kernel)
         img = cv.filter2D(img, -1, kernel)

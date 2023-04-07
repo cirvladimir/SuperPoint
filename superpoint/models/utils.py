@@ -15,14 +15,14 @@ def detector_head(inputs, **config):
     with tf.variable_scope('detector', reuse=tf.AUTO_REUSE):
         x = vgg_block(inputs, 256, 3, 'conv1',
                       activation=tf.nn.relu, **params_conv)
-        x = vgg_block(x, 1+pow(config['grid_size'], 2), 1, 'conv2',
+        x = vgg_block(x, 1 + pow(config['grid_size'], 2), 1, 'conv2',
                       activation=None, **params_conv)
 
         prob = tf.nn.softmax(x, axis=cindex)
         # Strip the extra “no interest point” dustbin
         prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
         prob = tf.depth_to_space(
-                prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
+            prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
         prob = tf.squeeze(prob, axis=cindex)
 
     return {'logits': x, 'prob': prob}
@@ -56,7 +56,7 @@ def detector_loss(keypoint_map, logits, valid_mask=None, **config):
     labels = tf.to_float(keypoint_map[..., tf.newaxis])  # for GPU
     labels = tf.space_to_depth(labels, config['grid_size'])
     shape = tf.concat([tf.shape(labels)[:3], [1]], axis=0)
-    labels = tf.concat([2*labels, tf.ones(shape)], 3)
+    labels = tf.concat([2 * labels, tf.ones(shape)], 3)
     # Add a small random matrix to randomly break ties in argmax
     labels = tf.argmax(labels + tf.random_uniform(tf.shape(labels), 0, 0.1),
                        axis=3)
@@ -68,7 +68,7 @@ def detector_loss(keypoint_map, logits, valid_mask=None, **config):
     valid_mask = tf.reduce_prod(valid_mask, axis=3)  # AND along the channel dim
 
     loss = tf.losses.sparse_softmax_cross_entropy(
-            labels=labels, logits=logits, weights=valid_mask)
+        labels=labels, logits=logits, weights=valid_mask)
     return loss
 
 
@@ -78,7 +78,8 @@ def descriptor_loss(descriptors, warped_descriptors, homographies,
     (batch_size, Hc, Wc) = tf.unstack(tf.to_int32(tf.shape(descriptors)[:3]))
     coord_cells = tf.stack(tf.meshgrid(
         tf.range(Hc), tf.range(Wc), indexing='ij'), axis=-1)
-    coord_cells = coord_cells * config['grid_size'] + config['grid_size'] // 2  # (Hc, Wc, 2)
+    coord_cells = coord_cells * config['grid_size'] + \
+        config['grid_size'] // 2  # (Hc, Wc, 2)
     # coord_cells is now a grid containing the coordinates of the Hc x Wc
     # center pixels of the 8x8 cells of the image
 
@@ -158,7 +159,7 @@ def spatial_nms(prob, size):
     with tf.name_scope('spatial_nms'):
         prob = tf.expand_dims(tf.expand_dims(prob, axis=0), axis=-1)
         pooled = tf.nn.max_pool(
-                prob, ksize=[1, size, size, 1], strides=[1, 1, 1, 1], padding='SAME')
+            prob, ksize=[1, size, size, 1], strides=[1, 1, 1, 1], padding='SAME')
         prob = tf.where(tf.equal(prob, pooled), prob, tf.zeros_like(prob))
         return tf.squeeze(prob)
 
@@ -177,12 +178,12 @@ def box_nms(prob, size, iou=0.1, min_prob=0.01, keep_top_k=0):
     """
     with tf.name_scope('box_nms'):
         pts = tf.to_float(tf.where(tf.greater_equal(prob, min_prob)))
-        size = tf.constant(size/2.)
-        boxes = tf.concat([pts-size, pts+size], axis=1)
+        size = tf.constant(size / 2.)
+        boxes = tf.concat([pts - size, pts + size], axis=1)
         scores = tf.gather_nd(prob, tf.to_int32(pts))
         with tf.device('/cpu:0'):
             indices = tf.image.non_max_suppression(
-                    boxes, scores, tf.shape(boxes)[0], iou)
+                boxes, scores, tf.shape(boxes)[0], iou)
         pts = tf.gather(pts, indices)
         scores = tf.gather(scores, indices)
         if keep_top_k:

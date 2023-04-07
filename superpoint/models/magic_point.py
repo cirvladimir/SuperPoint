@@ -8,17 +8,17 @@ from .homographies import homography_adaptation
 
 class MagicPoint(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 1], 'type': tf.float32}
+        'image': {'shape': [None, None, None, 1], 'type': tf.float32}
     }
     required_config_keys = []
     default_config = {
-            'data_format': 'channels_first',
-            'kernel_reg': 0.,
-            'grid_size': 8,
-            'detection_threshold': 0.4,
-            'homography_adaptation': {'num': 0},
-            'nms': 0,
-            'top_k': 0
+        'data_format': 'channels_first',
+        'kernel_reg': 0.,
+        'grid_size': 8,
+        'detection_threshold': 0.4,
+        'homography_adaptation': {'num': 0},
+        'nms': 0,
+        'top_k': 0
     }
 
     def _model(self, inputs, mode, **config):

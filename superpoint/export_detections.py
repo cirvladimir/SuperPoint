@@ -65,7 +65,7 @@ if __name__ == '__main__':
                 pred = net.predict(data, keys='*', batch=True)
 
             # Export
-            d2l = lambda d: [dict(zip(d, e)) for e in zip(*d.values())]  # noqa: E731
+            def d2l(d): return [dict(zip(d, e)) for e in zip(*d.values())]  # noqa: E731
             for p, d in zip(d2l(pred), d2l(data)):
                 if not ('name' in d):
                     p.update(d)  # Can't get the data back from the filename --> dump

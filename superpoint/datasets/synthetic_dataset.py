@@ -112,13 +112,13 @@ def final_blur(img, kernel_size=(5, 5)):
 def ccw(A, B, C, dim):
     """ Check if the points are listed in counter-clockwise order """
     if dim == 2:  # only 2 dimensions
-        return((C[:, 1] - A[:, 1]) * (B[:, 0] - A[:, 0])
-               > (B[:, 1] - A[:, 1]) * (C[:, 0] - A[:, 0]))
+        return ((C[:, 1] - A[:, 1]) * (B[:, 0] - A[:, 0])
+                > (B[:, 1] - A[:, 1]) * (C[:, 0] - A[:, 0]))
     else:  # dim should be equal to 3
-        return((C[:, 1, :] - A[:, 1, :])
-               * (B[:, 0, :] - A[:, 0, :])
-               > (B[:, 1, :] - A[:, 1, :])
-               * (C[:, 0, :] - A[:, 0, :]))
+        return ((C[:, 1, :] - A[:, 1, :])
+                * (B[:, 0, :] - A[:, 0, :])
+                > (B[:, 1, :] - A[:, 1, :])
+                * (C[:, 0, :] - A[:, 0, :]))
 
 
 def intersect(A, B, C, D, dim):
@@ -177,21 +177,21 @@ def draw_polygon(img, max_sides=8):
 
     # Sample num_corners points inside the circle
     slices = np.linspace(0, 2 * math.pi, num_corners + 1)
-    angles = [slices[i] + random_state.rand() * (slices[i+1] - slices[i])
+    angles = [slices[i] + random_state.rand() * (slices[i + 1] - slices[i])
               for i in range(num_corners)]
     points = np.array([[int(x + max(random_state.rand(), 0.4) * rad * math.cos(a)),
                         int(y + max(random_state.rand(), 0.4) * rad * math.sin(a))]
                        for a in angles])
 
     # Filter the points that are too close or that have an angle too flat
-    norms = [np.linalg.norm(points[(i-1) % num_corners, :]
+    norms = [np.linalg.norm(points[(i - 1) % num_corners, :]
                             - points[i, :]) for i in range(num_corners)]
     mask = np.array(norms) > 0.01
     points = points[mask, :]
     num_corners = points.shape[0]
-    corner_angles = [angle_between_vectors(points[(i-1) % num_corners, :] -
+    corner_angles = [angle_between_vectors(points[(i - 1) % num_corners, :] -
                                            points[i, :],
-                                           points[(i+1) % num_corners, :] -
+                                           points[(i + 1) % num_corners, :] -
                                            points[i, :])
                      for i in range(num_corners)]
     mask = np.array(corner_angles) < (2 * math.pi / 3)
@@ -245,7 +245,7 @@ def draw_multiple_polygons(img, max_sides=8, nb_polygons=30, **extra):
 
         # Sample num_corners points inside the circle
         slices = np.linspace(0, 2 * math.pi, num_corners + 1)
-        angles = [slices[i] + random_state.rand() * (slices[i+1] - slices[i])
+        angles = [slices[i] + random_state.rand() * (slices[i + 1] - slices[i])
                   for i in range(num_corners)]
         new_points = [[int(x + max(random_state.rand(), 0.4) * rad * math.cos(a)),
                        int(y + max(random_state.rand(), 0.4) * rad * math.sin(a))]
@@ -253,14 +253,14 @@ def draw_multiple_polygons(img, max_sides=8, nb_polygons=30, **extra):
         new_points = np.array(new_points)
 
         # Filter the points that are too close or that have an angle too flat
-        norms = [np.linalg.norm(new_points[(i-1) % num_corners, :]
+        norms = [np.linalg.norm(new_points[(i - 1) % num_corners, :]
                                 - new_points[i, :]) for i in range(num_corners)]
         mask = np.array(norms) > 0.01
         new_points = new_points[mask, :]
         num_corners = new_points.shape[0]
-        corner_angles = [angle_between_vectors(new_points[(i-1) % num_corners, :] -
+        corner_angles = [angle_between_vectors(new_points[(i - 1) % num_corners, :] -
                                                new_points[i, :],
-                                               new_points[(i+1) % num_corners, :] -
+                                               new_points[(i + 1) % num_corners, :] -
                                                new_points[i, :])
                          for i in range(num_corners)]
         mask = np.array(corner_angles) < (2 * math.pi / 3)
@@ -272,9 +272,9 @@ def draw_multiple_polygons(img, max_sides=8, nb_polygons=30, **extra):
         new_segments = np.zeros((1, 4, num_corners))
         new_segments[:, 0, :] = [new_points[i][0] for i in range(num_corners)]
         new_segments[:, 1, :] = [new_points[i][1] for i in range(num_corners)]
-        new_segments[:, 2, :] = [new_points[(i+1) % num_corners][0]
+        new_segments[:, 2, :] = [new_points[(i + 1) % num_corners][0]
                                  for i in range(num_corners)]
-        new_segments[:, 3, :] = [new_points[(i+1) % num_corners][1]
+        new_segments[:, 3, :] = [new_points[(i + 1) % num_corners][1]
                                  for i in range(num_corners)]
 
         # Check that the polygon will not overlap with pre-existing shapes
@@ -344,7 +344,7 @@ def draw_star(img, nb_branches=6):
     y = random_state.randint(rad, img.shape[0] - rad)
     # Sample num_branches points inside the circle
     slices = np.linspace(0, 2 * math.pi, num_branches + 1)
-    angles = [slices[i] + random_state.rand() * (slices[i+1] - slices[i])
+    angles = [slices[i] + random_state.rand() * (slices[i + 1] - slices[i])
               for i in range(num_branches)]
     points = np.array([[int(x + max(random_state.rand(), 0.3) * rad * math.cos(a)),
                         int(y + max(random_state.rand(), 0.3) * rad * math.sin(a))]
@@ -385,9 +385,9 @@ def draw_checkerboard(img, max_rows=7, max_cols=7, transform_params=(0.05, 0.15)
     min_dim = min(img.shape)
     square_size = min_dim // 3
     pts1 = np.float32([center_square + square_size,
-                       [center_square[0]+square_size, center_square[1]-square_size],
+                       [center_square[0] + square_size, center_square[1] - square_size],
                        center_square - square_size,
-                       [center_square[0]-square_size, center_square[1]+square_size]])
+                       [center_square[0] - square_size, center_square[1] + square_size]])
     pts2 = pts1 + random_state.uniform(-alpha_affine,
                                        alpha_affine,
                                        size=pts1.shape).astype(np.float32)
@@ -428,7 +428,7 @@ def draw_checkerboard(img, max_rows=7, max_cols=7, transform_params=(0.05, 0.15)
             else:
                 neighboring_colors = []
                 if i != 0:
-                    neighboring_colors.append(colors[(i-1) * cols + j])
+                    neighboring_colors.append(colors[(i - 1) * cols + j])
                 if j != 0:
                     neighboring_colors.append(colors[i * cols + j - 1])
                 col = get_different_color(np.array(neighboring_colors))
@@ -518,9 +518,9 @@ def draw_stripes(img, max_nb_cols=13, min_width_ratio=0.04,
     center_square = np.float32(img.shape) // 2
     square_size = min(img.shape) // 3
     pts1 = np.float32([center_square + square_size,
-                       [center_square[0]+square_size, center_square[1]-square_size],
+                       [center_square[0] + square_size, center_square[1] - square_size],
                        center_square - square_size,
-                       [center_square[0]-square_size, center_square[1]+square_size]])
+                       [center_square[0] - square_size, center_square[1] + square_size]])
     pts2 = pts1 + random_state.uniform(-alpha_affine,
                                        alpha_affine,
                                        size=pts1.shape).astype(np.float32)
@@ -557,12 +557,12 @@ def draw_stripes(img, max_nb_cols=13, min_width_ratio=0.04,
         color = (color + 128 + random_state.randint(-30, 30)) % 256
         cv.fillConvexPoly(img, np.array([(warped_points[i, 0],
                                           warped_points[i, 1]),
-                                         (warped_points[i+1, 0],
-                                          warped_points[i+1, 1]),
-                                         (warped_points[i+col+2, 0],
-                                          warped_points[i+col+2, 1]),
-                                         (warped_points[i+col+1, 0],
-                                          warped_points[i+col+1, 1])]),
+                                         (warped_points[i + 1, 0],
+                                          warped_points[i + 1, 1]),
+                                         (warped_points[i + col + 2, 0],
+                                          warped_points[i + col + 2, 1]),
+                                         (warped_points[i + col + 1, 0],
+                                          warped_points[i + col + 1, 1])]),
                           color)
 
     # Draw lines on the boundaries of the stripes at random
@@ -670,7 +670,7 @@ def draw_cube(img, min_size_ratio=0.2, min_angle_rot=math.pi / 10,
         for j in [0, 1, 2, 3]:
             col_edge = (col_face + 128
                         + random_state.randint(-64, 64))\
-                        % 256  # color that constrats with the face color
+                % 256  # color that constrats with the face color
             cv.line(img, (cube[faces[i][j], 0], cube[faces[i][j], 1]),
                     (cube[faces[i][(j + 1) % 4], 0], cube[faces[i][(j + 1) % 4], 1]),
                     col_edge, thickness)

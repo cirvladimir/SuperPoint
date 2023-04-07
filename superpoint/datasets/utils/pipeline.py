@@ -65,7 +65,7 @@ def add_dummy_valid_mask(data):
 def add_keypoint_map(data):
     with tf.name_scope('add_keypoint_map'):
         image_shape = tf.shape(data['image'])[:2]
-        kp = tf.minimum(tf.to_int32(tf.round(data['keypoints'])), image_shape-1)
+        kp = tf.minimum(tf.to_int32(tf.round(data['keypoints'])), image_shape - 1)
         kmap = tf.scatter_nd(
             kp, tf.ones([tf.shape(kp)[0]], dtype=tf.int32), image_shape)
     return {**data, 'keypoint_map': kmap}
@@ -76,9 +76,9 @@ def downsample(image, coordinates, **config):
         k_size = config['blur_size']
         kernel = cv.getGaussianKernel(k_size, 0)[:, 0]
         kernel = np.outer(kernel, kernel).astype(np.float32)
-        kernel = tf.reshape(tf.convert_to_tensor(kernel), [k_size]*2+[1, 1])
-        pad_size = int(k_size/2)
-        image = tf.pad(image, [[pad_size]*2, [pad_size]*2, [0, 0]], 'REFLECT')
+        kernel = tf.reshape(tf.convert_to_tensor(kernel), [k_size] * 2 + [1, 1])
+        pad_size = int(k_size / 2)
+        image = tf.pad(image, [[pad_size] * 2, [pad_size] * 2, [0, 0]], 'REFLECT')
         image = tf.expand_dims(image, axis=0)  # add batch dim
         image = tf.nn.depthwise_conv2d(image, kernel, [1, 1, 1, 1], 'VALID')[0]
 

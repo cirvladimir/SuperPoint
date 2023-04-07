@@ -10,8 +10,8 @@ def vgg_block(inputs, filters, kernel_size, name, data_format, training=False,
                        data_format=data_format, **params)
         if batch_normalization:
             x = tfl.batch_normalization(
-                    x, training=training, name='bn', fused=True,
-                    axis=1 if data_format == 'channels_first' else -1)
+                x, training=training, name='bn', fused=True,
+                axis=1 if data_format == 'channels_first' else -1)
     return x
 
 

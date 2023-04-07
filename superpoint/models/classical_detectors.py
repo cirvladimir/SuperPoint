@@ -1,13 +1,12 @@
+from demo_superpoint import SuperPointNet, SuperPointFrontend
+from .utils import box_nms
+from .base_model import BaseModel
 import tensorflow as tf
 import numpy as np
 import cv2
 import sys
 
 sys.path.append('/cluster/home/pautratr/3d_project/SuperPointPretrainedNetwork')
-
-from .base_model import BaseModel
-from .utils import box_nms
-from demo_superpoint import SuperPointNet, SuperPointFrontend
 
 
 def classical_detector(im, **config):
@@ -50,13 +49,13 @@ def classical_detector(im, **config):
 
 class ClassicalDetectors(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 1], 'type': tf.float32}
+        'image': {'shape': [None, None, None, 1], 'type': tf.float32}
     }
     default_config = {
-            'method': 'harris',  # 'shi', 'fast', 'random'
-            'threshold': 0.5,
-            'nms': 4,
-            'top_k': 300,
+        'method': 'harris',  # 'shi', 'fast', 'random'
+        'threshold': 0.5,
+        'nms': 4,
+        'top_k': 300,
     }
     trainable = False
 
@@ -78,6 +77,6 @@ class ClassicalDetectors(BaseModel):
     def _metrics(self, outputs, inputs, **config):
         pred = outputs['pred']
         labels = inputs['keypoint_map']
-        precision = tf.reduce_sum(pred*labels) / tf.reduce_sum(pred)
-        recall = tf.reduce_sum(pred*labels) / tf.reduce_sum(labels)
+        precision = tf.reduce_sum(pred * labels) / tf.reduce_sum(pred)
+        recall = tf.reduce_sum(pred * labels) / tf.reduce_sum(labels)
         return {'precision': precision, 'recall': recall}

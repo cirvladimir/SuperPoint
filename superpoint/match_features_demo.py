@@ -124,7 +124,7 @@ if __name__ == '__main__':
         keypoint_map1 = np.squeeze(out1[0])
         descriptor_map1 = np.squeeze(out1[1])
         kp1, desc1 = extract_superpoint_keypoints_and_descriptors(
-                keypoint_map1, descriptor_map1, keep_k_best)
+            keypoint_map1, descriptor_map1, keep_k_best)
 
         img2, img2_orig = preprocess_image(img2_file, img_size)
         out2 = sess.run([output_prob_nms_tensor, output_desc_tensors],
@@ -132,7 +132,7 @@ if __name__ == '__main__':
         keypoint_map2 = np.squeeze(out2[0])
         descriptor_map2 = np.squeeze(out2[1])
         kp2, desc2 = extract_superpoint_keypoints_and_descriptors(
-                keypoint_map2, descriptor_map2, keep_k_best)
+            keypoint_map2, descriptor_map2, keep_k_best)
 
         # Match and get rid of outliers
         m_kp1, m_kp2, matches = match_descriptors(kp1, desc1, kp2, desc2)
@@ -150,7 +150,7 @@ if __name__ == '__main__':
         sift_kp1, sift_desc1 = extract_SIFT_keypoints_and_descriptors(img1_orig)
         sift_kp2, sift_desc2 = extract_SIFT_keypoints_and_descriptors(img2_orig)
         sift_m_kp1, sift_m_kp2, sift_matches = match_descriptors(
-                sift_kp1, sift_desc1, sift_kp2, sift_desc2)
+            sift_kp1, sift_desc1, sift_kp2, sift_desc2)
         sift_H, sift_inliers = compute_homography(sift_m_kp1, sift_m_kp2)
 
         # Draw SIFT matches

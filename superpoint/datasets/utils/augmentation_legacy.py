@@ -6,16 +6,16 @@ from scipy.ndimage.filters import gaussian_filter
 """ Data augmentation of 2D images """
 
 augmentations = [
-        'additive_gaussian_noise',
-        'additive_speckle_noise',
-        'random_brightness',
-        'random_contrast',
-        'affine_transform',
-        'perspective_transform',
-        'elastic_transform',
-        'random_crop',
-        'add_shade',
-        'motion_blur'
+    'additive_gaussian_noise',
+    'additive_speckle_noise',
+    'random_brightness',
+    'random_contrast',
+    'affine_transform',
+    'perspective_transform',
+    'elastic_transform',
+    'random_crop',
+    'add_shade',
+    'motion_blur'
 ]
 
 
@@ -26,8 +26,8 @@ def dummy(image, keypoints):
 def keep_points_inside(points, size):
     """ Keep only the points whose coordinates are inside the dimensions of
     the image of size 'size' """
-    mask = (points[:, 0] >= 0) & (points[:, 0] <= (size[1]-1)) &\
-           (points[:, 1] >= 0) & (points[:, 1] <= (size[0]-1))
+    mask = (points[:, 0] >= 0) & (points[:, 0] <= (size[1] - 1)) &\
+           (points[:, 1] >= 0) & (points[:, 1] <= (size[0] - 1))
     return points[mask, :]
 
 
@@ -94,7 +94,7 @@ def resize_after_crop(orig_img, cropped_img, keypoints, random_state=None):
         col_length = int(cropped_img.shape[0] / ratio)
         min_col = cropped_img.shape[1] // 2 - col_length // 2
         max_col = min_col + col_length
-        resized_img = cropped_img[:, min_col:(max_col+1)]
+        resized_img = cropped_img[:, min_col:(max_col + 1)]
         mask = (keypoints[:, 0] >= min_col) & (keypoints[:, 0] <= max_col)
         new_keypoints = keypoints[mask, :].astype(float)
         new_keypoints[:, 0] -= min_col
@@ -104,7 +104,7 @@ def resize_after_crop(orig_img, cropped_img, keypoints, random_state=None):
         row_length = int(cropped_img.shape[1] * ratio)
         min_row = cropped_img.shape[0] // 2 - row_length // 2
         max_row = min_row + row_length
-        resized_img = cropped_img[min_row:(max_row+1), :]
+        resized_img = cropped_img[min_row:(max_row + 1), :]
         mask = (keypoints[:, 1] >= min_row) & (keypoints[:, 1] <= max_row)
         new_keypoints = keypoints[mask, :].astype(float)
         new_keypoints[:, 1] -= min_row
@@ -168,7 +168,7 @@ def affine_transform(img, keypoints, random_state=None, affine_params=(0.05, 0.1
     center_square = np.float32(shape) // 2
     square_size = min(shape) // 3
     pts1 = np.float32([center_square + square_size,
-                       [center_square[0]+square_size, center_square[1]-square_size],
+                       [center_square[0] + square_size, center_square[1] - square_size],
                        center_square - square_size])
     pts2 = pts1 + random_state.uniform(-alpha_affine,
                                        alpha_affine,
@@ -281,12 +281,12 @@ def random_crop(img, keypoints, random_state=None, min_crop_ratio=0.5):
     new_row_length = int(ratio * new_col_length)
     start_col = random_state.randint(shape[1] - new_col_length)
     start_row = random_state.randint(shape[0] - new_row_length)
-    cropped_img = img[start_row:(start_row+new_row_length),
-                      start_col:(start_col+new_col_length)]
+    cropped_img = img[start_row:(start_row + new_row_length),
+                      start_col:(start_col + new_col_length)]
     mask = (keypoints[:, 0] >= start_col) &\
-           (keypoints[:, 0] < start_col+new_col_length) &\
+           (keypoints[:, 0] < start_col + new_col_length) &\
            (keypoints[:, 1] >= start_row) &\
-           (keypoints[:, 1] < start_row+new_row_length)
+           (keypoints[:, 1] < start_row + new_row_length)
     new_keypoints = keypoints[mask, :].astype(float)
 
     # Resize the keypoints and the image
@@ -326,7 +326,7 @@ def add_shade(img, keypoints, random_state=None, nb_ellipses=20,
     if (kernel_size % 2) == 0:  # kernel_size has to be odd
         kernel_size += 1
     mask = cv.GaussianBlur(mask.astype(np.float), (kernel_size, kernel_size), 0)
-    shaded = img * (1 - transparency * mask/255.)
+    shaded = img * (1 - transparency * mask / 255.)
     shaded = np.clip(shaded, 0, 255)
     return (shaded.astype(np.uint8), keypoints)
 
@@ -380,8 +380,8 @@ def add_fog(img, keypoints, random_state=None, max_nb_ellipses=20,
 def motion_blur(img, keypoints, max_ksize=10):
     # Either vertial, hozirontal or diagonal blur
     mode = np.random.choice(['h', 'v', 'diag_down', 'diag_up'])
-    ksize = np.random.randint(0, (max_ksize+1)/2)*2 + 1  # make sure is odd
-    center = int((ksize-1)/2)
+    ksize = np.random.randint(0, (max_ksize + 1) / 2) * 2 + 1  # make sure is odd
+    center = int((ksize - 1) / 2)
     kernel = np.zeros((ksize, ksize))
     if mode == 'h':
         kernel[center, :] = 1.
@@ -393,7 +393,8 @@ def motion_blur(img, keypoints, max_ksize=10):
         kernel = np.flip(np.eye(ksize), 0)
     var = ksize * ksize / 16.
     grid = np.repeat(np.arange(ksize)[:, np.newaxis], ksize, axis=-1)
-    gaussian = np.exp(-(np.square(grid-center)+np.square(grid.T-center))/(2.*var))
+    gaussian = np.exp(-(np.square(grid - center) +
+                      np.square(grid.T - center)) / (2. * var))
     kernel *= gaussian
     kernel /= np.sum(kernel)
     img = cv.filter2D(img.astype(np.uint8), -1, kernel)

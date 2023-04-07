@@ -116,7 +116,7 @@ class BaseModel(metaclass=ABCMeta):
         for r in required:
             assert r in self.config, 'Required configuration entry: \'{}\''.format(r)
         assert set(self.datasets) <= self.dataset_names, \
-            'Unknown dataset name: {}'.format(set(self.datasets)-self.dataset_names)
+            'Unknown dataset name: {}'.format(set(self.datasets) - self.dataset_names)
         assert n_gpus > 0, 'TODO: CPU-only training is currently not supported.'
 
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
@@ -140,7 +140,7 @@ class BaseModel(metaclass=ABCMeta):
         # Split the batch between the GPUs (data parallelism)
         with tf.device('/cpu:0'):
             with tf.name_scope('{}_data_sharding'.format(mode)):
-                shards = self._unstack_nested_dict(data, batch_size*self.n_gpus)
+                shards = self._unstack_nested_dict(data, batch_size * self.n_gpus)
                 shards = self._shard_nested_dict(shards, self.n_gpus)
 
         # Create towers, i.e. copies of the model for each GPU,
@@ -232,12 +232,12 @@ class BaseModel(metaclass=ABCMeta):
                 for n, d in self.datasets.items():
                     output_shapes = d.output_shapes
                     if n == 'training':
-                        train_batch = self.config['batch_size']*self.n_gpus
+                        train_batch = self.config['batch_size'] * self.n_gpus
                         d = d.repeat().padded_batch(
                             train_batch, output_shapes).prefetch(train_batch)
                         self.dataset_iterators[n] = d.make_one_shot_iterator()
                     else:
-                        d = d.padded_batch(self.config['eval_batch_size']*self.n_gpus,
+                        d = d.padded_batch(self.config['eval_batch_size'] * self.n_gpus,
                                            output_shapes)
                         self.dataset_iterators[n] = d.make_initializable_iterator()
                     output_types = d.output_types
@@ -313,7 +313,7 @@ class BaseModel(metaclass=ABCMeta):
                 feed_dict={self.handle: self.dataset_handles['training']},
                 options=options, run_metadata=run_metadata)
 
-            if save_interval and checkpoint_path and (i+1) % save_interval == 0:
+            if save_interval and checkpoint_path and (i + 1) % save_interval == 0:
                 self.save(checkpoint_path)
             if 'validation' in self.datasets and i % validation_interval == 0:
                 metrics = self.evaluate('validation', mute=True)

@@ -108,7 +108,6 @@ class BaseDataset(metaclass=ABCMeta):
                 self.tf_splits[n] = self._get_data(self.dataset, n, **self.config)
                 self.tf_next[n] = self.tf_splits[n].make_one_shot_iterator().get_next()
         self.end_set = tf.errors.OutOfRangeError
-        self.sess = tf.Session()
 
     def _get_set_generator(self, set_name):
         while True:

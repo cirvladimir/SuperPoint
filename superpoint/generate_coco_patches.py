@@ -21,7 +21,7 @@ def _scale_preserving_resize(image):
     image = tf.image.resize(image, tf.to_int32(new_size),
                             method=tf.image.ResizeMethod.BILINEAR)
     return tf.image.resize_with_crop_or_pad(image, target_size[0],
-                                                  target_size[1])
+                                            target_size[1])
 
 
 def _preprocess(image):

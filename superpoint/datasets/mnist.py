@@ -23,6 +23,6 @@ class Mnist(BaseDataset):
             data = dataset.test
 
         data = tf.data.Dataset.from_tensor_slices(
-                {'image': data.images, 'label': data.labels.astype(int)})
+            {'image': data.images, 'label': data.labels.astype(int)})
         data = data.shuffle(buffer_size=10000)
         return data

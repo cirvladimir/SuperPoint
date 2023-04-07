@@ -7,23 +7,23 @@ from . import utils
 
 class SuperPoint(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 1], 'type': tf.float32}
+        'image': {'shape': [None, None, None, 1], 'type': tf.float32}
     }
     required_config_keys = []
     default_config = {
-            'data_format': 'channels_first',
-            'grid_size': 8,
-            'detection_threshold': 0.4,
-            'descriptor_size': 256,
-            'batch_size': 32,
-            'learning_rate': 0.001,
-            'lambda_d': 250,
-            'descriptor_size': 256,
-            'positive_margin': 1,
-            'negative_margin': 0.2,
-            'lambda_loss': 0.0001,
-            'nms': 0,
-            'top_k': 0,
+        'data_format': 'channels_first',
+        'grid_size': 8,
+        'detection_threshold': 0.4,
+        'descriptor_size': 256,
+        'batch_size': 32,
+        'learning_rate': 0.001,
+        'lambda_d': 250,
+        'descriptor_size': 256,
+        'positive_margin': 1,
+        'negative_margin': 0.2,
+        'lambda_loss': 0.0001,
+        'nms': 0,
+        'top_k': 0,
     }
 
     def _model(self, inputs, mode, **config):
@@ -70,16 +70,16 @@ class SuperPoint(BaseModel):
 
         # Compute the loss for the detector head
         detector_loss = utils.detector_loss(
-                inputs['keypoint_map'], logits,
-                valid_mask=inputs['valid_mask'], **config)
+            inputs['keypoint_map'], logits,
+            valid_mask=inputs['valid_mask'], **config)
         warped_detector_loss = utils.detector_loss(
-                inputs['warped']['keypoint_map'], warped_logits,
-                valid_mask=inputs['warped']['valid_mask'], **config)
+            inputs['warped']['keypoint_map'], warped_logits,
+            valid_mask=inputs['warped']['valid_mask'], **config)
 
         # Compute the loss for the descriptor head
         descriptor_loss = utils.descriptor_loss(
-                descriptors, warped_descriptors, outputs['homography'],
-                valid_mask=inputs['warped']['valid_mask'], **config)
+            descriptors, warped_descriptors, outputs['homography'],
+            valid_mask=inputs['warped']['valid_mask'], **config)
 
         tf.summary.scalar('detector_loss1', detector_loss)
         tf.summary.scalar('detector_loss2', warped_detector_loss)

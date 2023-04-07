@@ -1,13 +1,12 @@
+from demo_superpoint import SuperPointNet, SuperPointFrontend
+from .utils import box_nms
+from .base_model import BaseModel
 import tensorflow as tf
 import numpy as np
 import cv2
 import sys
 
 sys.path.append('/cluster/home/pautratr/3d_project/SuperPointPretrainedNetwork')
-
-from .base_model import BaseModel
-from .utils import box_nms
-from demo_superpoint import SuperPointNet, SuperPointFrontend
 
 
 def classical_detector_descriptor(im, **config):
@@ -56,13 +55,13 @@ def classical_detector_descriptor(im, **config):
 
 class ClassicalDetectorsDescriptors(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 1], 'type': tf.float32}
+        'image': {'shape': [None, None, None, 1], 'type': tf.float32}
     }
     default_config = {
-            'method': 'sift',  # 'orb'
-            'threshold': 0.5,
-            'nms': 4,
-            'top_k': 300,
+        'method': 'sift',  # 'orb'
+        'threshold': 0.5,
+        'nms': 4,
+        'top_k': 300,
     }
     trainable = False
 
@@ -73,7 +72,7 @@ class ClassicalDetectorsDescriptors(BaseModel):
                 lambda x: classical_detector_descriptor(x, **config),
                 [i],
                 (tf.float32, tf.float32)),
-                                               im, [tf.float32, tf.float32])
+                im, [tf.float32, tf.float32])
             prob = keypoints
             prob_nms = prob
             if config['nms']:
@@ -89,6 +88,6 @@ class ClassicalDetectorsDescriptors(BaseModel):
     def _metrics(self, outputs, inputs, **config):
         pred = outputs['pred']
         labels = inputs['keypoint_map']
-        precision = tf.reduce_sum(pred*labels) / tf.reduce_sum(pred)
-        recall = tf.reduce_sum(pred*labels) / tf.reduce_sum(labels)
+        precision = tf.reduce_sum(pred * labels) / tf.reduce_sum(pred)
+        recall = tf.reduce_sum(pred * labels) / tf.reduce_sum(labels)
         return {'precision': precision, 'recall': recall}

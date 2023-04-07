@@ -6,7 +6,7 @@ from .base_model import BaseModel, Mode
 
 class SimpleClassifier(BaseModel):
     input_spec = {
-            'image': {'shape': [None, None, None, 1], 'type': tf.float32}
+        'image': {'shape': [None, None, None, 1], 'type': tf.float32}
     }
     required_config_keys = []
     default_config = {'data_format': 'channels_first'}
@@ -36,7 +36,7 @@ class SimpleClassifier(BaseModel):
     def _loss(self, outputs, inputs, **config):
         with tf.name_scope('loss'):
             loss = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(
-                    labels=inputs['label'], logits=outputs['logits']))
+                labels=inputs['label'], logits=outputs['logits']))
         return loss
 
     def _metrics(self, outputs, inputs, **config):

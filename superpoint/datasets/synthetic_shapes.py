@@ -17,55 +17,55 @@ from superpoint.settings import DATA_PATH
 
 class SyntheticShapes(BaseDataset):
     default_config = {
-            'primitives': 'all',
-            'truncate': {},
-            'validation_size': -1,
-            'test_size': -1,
-            'on-the-fly': False,
-            'cache_in_memory': False,
-            'suffix': None,
-            'add_augmentation_to_test_set': False,
-            'num_parallel_calls': 10,
-            'generation': {
-                'split_sizes': {'training': 10000, 'validation': 200, 'test': 500},
-                'image_size': [960, 1280],
-                'random_seed': 0,
-                'params': {
-                    'generate_background': {
-                        'min_kernel_size': 150, 'max_kernel_size': 500,
-                        'min_rad_ratio': 0.02, 'max_rad_ratio': 0.031},
-                    'draw_stripes': {'transform_params': (0.1, 0.1)},
-                    'draw_multiple_polygons': {'kernel_boundaries': (50, 100)}
-                },
+        'primitives': 'all',
+        'truncate': {},
+        'validation_size': -1,
+        'test_size': -1,
+        'on-the-fly': False,
+        'cache_in_memory': False,
+        'suffix': None,
+        'add_augmentation_to_test_set': False,
+        'num_parallel_calls': 10,
+        'generation': {
+            'split_sizes': {'training': 10000, 'validation': 200, 'test': 500},
+            'image_size': [960, 1280],
+            'random_seed': 0,
+            'params': {
+                'generate_background': {
+                    'min_kernel_size': 150, 'max_kernel_size': 500,
+                    'min_rad_ratio': 0.02, 'max_rad_ratio': 0.031},
+                'draw_stripes': {'transform_params': (0.1, 0.1)},
+                'draw_multiple_polygons': {'kernel_boundaries': (50, 100)}
             },
-            'preprocessing': {
-                'resize': [240, 320],
-                'blur_size': 11,
+        },
+        'preprocessing': {
+            'resize': [240, 320],
+            'blur_size': 11,
+        },
+        'augmentation': {
+            'photometric': {
+                'enable': False,
+                'primitives': 'all',
+                'params': {},
+                'random_order': True,
             },
-            'augmentation': {
-                'photometric': {
-                    'enable': False,
-                    'primitives': 'all',
-                    'params': {},
-                    'random_order': True,
-                },
-                'homographic': {
-                    'enable': False,
-                    'params': {},
-                    'valid_border_margin': 0,
-                },
-            }
+            'homographic': {
+                'enable': False,
+                'params': {},
+                'valid_border_margin': 0,
+            },
+        }
     }
     drawing_primitives = [
-            'draw_lines',
-            'draw_polygon',
-            'draw_multiple_polygons',
-            'draw_ellipses',
-            'draw_star',
-            'draw_checkerboard',
-            'draw_stripes',
-            'draw_cube',
-            'gaussian_noise'
+        'draw_lines',
+        'draw_polygon',
+        'draw_multiple_polygons',
+        'draw_ellipses',
+        'draw_star',
+        'draw_checkerboard',
+        'draw_stripes',
+        'draw_cube',
+        'gaussian_noise'
     ]
 
     def dump_primitive_data(self, primitive, tar_path, config):
@@ -73,7 +73,7 @@ class SyntheticShapes(BaseDataset):
 
         logging.info('Generating tarfile for primitive {}.'.format(primitive))
         synthetic_dataset.set_random_state(np.random.RandomState(
-                config['generation']['random_seed']))
+            config['generation']['random_seed']))
         for split, size in self.config['generation']['split_sizes'].items():
             im_dir, pts_dir = [Path(temp_dir, i, split) for i in ['images', 'points']]
             im_dir.mkdir(parents=True, exist_ok=True)
@@ -81,10 +81,10 @@ class SyntheticShapes(BaseDataset):
 
             for i in tqdm(range(size), desc=split, leave=False):
                 image = synthetic_dataset.generate_background(
-                        config['generation']['image_size'],
-                        **config['generation']['params']['generate_background'])
+                    config['generation']['image_size'],
+                    **config['generation']['params']['generate_background'])
                 points = np.array(getattr(synthetic_dataset, primitive)(
-                        image, **config['generation']['params'].get(primitive, {})))
+                    image, **config['generation']['params'].get(primitive, {})))
                 points = np.flip(points, 1)  # reverse convention with opencv
 
                 b = config['preprocessing']['blur_size']
@@ -109,14 +109,14 @@ class SyntheticShapes(BaseDataset):
         primitives = parse_primitives(config['primitives'], self.drawing_primitives)
 
         tf.data.Dataset.map_parallel = lambda self, fn: self.map(
-                fn, num_parallel_calls=config['num_parallel_calls'])
+            fn, num_parallel_calls=config['num_parallel_calls'])
 
         if config['on-the-fly']:
             return None
 
         basepath = Path(
-                DATA_PATH, 'synthetic_shapes' +
-                ('_{}'.format(config['suffix']) if config['suffix'] is not None else ''))
+            DATA_PATH, 'synthetic_shapes' +
+            ('_{}'.format(config['suffix']) if config['suffix'] is not None else ''))
         basepath.mkdir(parents=True, exist_ok=True)
 
         splits = {s: {'images': [], 'points': []}
@@ -140,8 +140,8 @@ class SyntheticShapes(BaseDataset):
                 e = [str(p) for p in Path(path, 'images', s).iterdir()]
                 f = [p.replace('images', 'points') for p in e]
                 f = [p.replace('.png', '.npy') for p in f]
-                splits[s]['images'].extend(e[:int(truncate*len(e))])
-                splits[s]['points'].extend(f[:int(truncate*len(f))])
+                splits[s]['images'].extend(e[:int(truncate * len(e))])
+                splits[s]['points'].extend(f[:int(truncate * len(f))])
 
         # Shuffle
         for s in splits:
@@ -157,10 +157,10 @@ class SyntheticShapes(BaseDataset):
             while True:
                 primitive = np.random.choice(primitives)
                 image = synthetic_dataset.generate_background(
-                        config['generation']['image_size'],
-                        **config['generation']['params']['generate_background'])
+                    config['generation']['image_size'],
+                    **config['generation']['params']['generate_background'])
                 points = np.array(getattr(synthetic_dataset, primitive)(
-                        image, **config['generation']['params'].get(primitive, {})))
+                    image, **config['generation']['params'].get(primitive, {})))
                 yield (np.expand_dims(image, axis=-1).astype(np.float32),
                        np.flip(points.astype(np.float32), 1))
 
@@ -175,19 +175,19 @@ class SyntheticShapes(BaseDataset):
 
         if config['on-the-fly']:
             data = tf.data.Dataset.from_generator(
-                    _gen_shape, (tf.float32, tf.float32),
-                    (tf.TensorShape(config['generation']['image_size']+[1]),
-                     tf.TensorShape([None, 2])))
+                _gen_shape, (tf.float32, tf.float32),
+                (tf.TensorShape(config['generation']['image_size'] + [1]),
+                 tf.TensorShape([None, 2])))
             data = data.map(lambda i, c: pipeline.downsample(
-                    i, c, **config['preprocessing']))
+                i, c, **config['preprocessing']))
         else:
             # Initialize dataset with file names
             data = tf.data.Dataset.from_tensor_slices(
-                    (filenames[split_name]['images'], filenames[split_name]['points']))
+                (filenames[split_name]['images'], filenames[split_name]['points']))
             # Read image and point coordinates
             data = data.map(
-                    lambda image, points:
-                    (_read_image(image), tf.py_func(_read_points, [points], tf.float32)))
+                lambda image, points:
+                (_read_image(image), tf.py_func(_read_points, [points], tf.float32)))
             data = data.map(lambda image, points: (image, tf.reshape(points, [-1, 2])))
 
         if split_name == 'validation':
@@ -213,6 +213,7 @@ class SyntheticShapes(BaseDataset):
 
         # Convert the point coordinates to a dense keypoint map
         data = data.map_parallel(pipeline.add_keypoint_map)
-        data = data.map_parallel(lambda d: {**d, 'image': tf.to_float(d['image']) / 255.})
+        data = data.map_parallel(
+            lambda d: {**d, 'image': tf.to_float(d['image']) / 255.})
 
         return data

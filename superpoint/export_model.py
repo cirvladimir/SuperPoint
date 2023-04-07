@@ -35,7 +35,7 @@ if __name__ == '__main__':
         net.load(str(checkpoint_path))
 
         tf.saved_model.simple_save(
-                net.sess,
-                str(export_dir),
-                inputs=net.pred_in,
-                outputs=net.pred_out)
+            net.sess,
+            str(export_dir),
+            inputs=net.pred_in,
+            outputs=net.pred_out)
