@@ -228,43 +228,41 @@ class BaseModel(metaclass=ABCMeta):
         if self.datasets:
             # Generate iterators for the given tf datasets
             self.dataset_iterators = {}
-            with tf.device('/cpu:0'):
-                for n, d in self.datasets.items():
-                    output_shapes = d.output_shapes
-                    if n == 'training':
-                        train_batch = self.config['batch_size'] * self.n_gpus
-                        d = d.repeat().padded_batch(
-                            train_batch, output_shapes).prefetch(train_batch)
-                        self.dataset_iterators[n] = d.make_one_shot_iterator()
-                    else:
-                        d = d.padded_batch(self.config['eval_batch_size'] * self.n_gpus,
-                                           output_shapes)
-                        self.dataset_iterators[n] = d.make_initializable_iterator()
-                    output_types = d.output_types
-                    output_shapes = d.output_shapes
-                    self.datasets[n] = d
+            for n, d in self.datasets.items():
+                output_shapes = d.output_shapes
+                if n == 'training':
+                    train_batch = self.config['batch_size'] * self.n_gpus
+                    d = d.repeat().padded_batch(
+                        train_batch, output_shapes).prefetch(train_batch)
+                    self.dataset_iterators[n] = d.make_one_shot_iterator()
+                else:
+                    d = d.padded_batch(self.config['eval_batch_size'] * self.n_gpus,
+                                       output_shapes)
+                    self.dataset_iterators[n] = d.make_initializable_iterator()
+                output_types = d.output_types
+                output_shapes = d.output_shapes
+                self.datasets[n] = d
 
-                    # Perform compatibility checks with the inputs of the child model
-                    for i, spec in self.input_spec.items():
-                        assert i in output_shapes
-                        tf.TensorShape(output_shapes[i]).assert_is_compatible_with(
-                            tf.TensorShape(spec['shape']))
+                # Perform compatibility checks with the inputs of the child model
+                for i, spec in self.input_spec.items():
+                    assert i in output_shapes
+                    tf.TensorShape(output_shapes[i]).assert_is_compatible_with(
+                        tf.TensorShape(spec['shape']))
 
-                # Used for input shapes of the prediction network
-                if self.data_shape is None:
-                    self.data_shape = output_shapes
+            # Used for input shapes of the prediction network
+            if self.data_shape is None:
+                self.data_shape = output_shapes
 
-                # Handle for the feedable iterator
-                self.handle = tf.placeholder(tf.string, shape=[])
-                iterator = tf.data.Iterator.from_string_handle(
-                    self.handle, output_types, output_shapes)
-                data = iterator.get_next()
+            # Handle for the feedable iterator
+            self.handle = tf.placeholder(tf.string, shape=[])
+            iterator = tf.data.Iterator.from_string_handle(
+                self.handle, output_types, output_shapes)
+            data = iterator.get_next()
 
             # Build the actual training and evaluation models
             if self.trainable:
                 self._train_graph(data)
             self._eval_graph(data)
-            self.summaries = tf.summary.merge_all()
 
         # Prediction network with feed_dict
         if self.data_shape is None:
@@ -402,12 +400,3 @@ class BaseModel(metaclass=ABCMeta):
         logging.info('Saving checkpoint for iteration #{}'.format(step))
         self.saver.save(self.sess, checkpoint_path, write_meta_graph=False,
                         global_step=step)
-
-    def close(self):
-        self.sess.close()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()

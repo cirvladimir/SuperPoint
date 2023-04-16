@@ -1,4 +1,8 @@
-def get_model(name):
+from base_model import BaseModel
+from collections.abc import Callable
+
+
+def get_model(name) -> Callable[..., BaseModel]:
     mod = __import__('superpoint.models.{}'.format(name), fromlist=[''])
     return getattr(mod, _module_to_class(name))
 

@@ -19,59 +19,59 @@ import tensorflow as tf  # noqa: E402
 def train(config, n_iter, output_dir, pretrained_dir=None,
           checkpoint_name='model.ckpt'):
     checkpoint_path = os.path.join(output_dir, checkpoint_name)
-    with _init_graph(config) as net:
-        if pretrained_dir is not None:
-            net.load(pretrained_dir)
-        try:
-            net.train(n_iter, output_dir=output_dir,
-                      validation_interval=config.get('validation_interval', 100),
-                      save_interval=config.get('save_interval', None),
-                      checkpoint_path=checkpoint_path,
-                      keep_checkpoints=config.get('keep_checkpoints', 1))
-        except KeyboardInterrupt:
-            logging.info('Got Keyboard Interrupt, saving model and closing.')
-        net.save(os.path.join(output_dir, checkpoint_name))
+
+    set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
+
+    dataset = get_dataset(config['data']['name'])(**config['data'])
+    model = get_model(config['model']['name'])(
+        dataset.get_tf_datasets(), **config['model'])
+
+    if pretrained_dir is not None:
+        model.load(pretrained_dir)
+    try:
+        model.train(n_iter, output_dir=output_dir,
+                    validation_interval=config.get('validation_interval', 100),
+                    save_interval=config.get('save_interval', None),
+                    checkpoint_path=checkpoint_path,
+                    keep_checkpoints=config.get('keep_checkpoints', 1))
+    except KeyboardInterrupt:
+        logging.info('Got Keyboard Interrupt, saving model and closing.')
+    model.save(os.path.join(output_dir, checkpoint_name))
 
 
 def evaluate(config, output_dir, n_iter=None):
-    with _init_graph(config) as net:
-        net.load(output_dir)
-        results = net.evaluate(config.get('eval_set', 'test'), max_iterations=n_iter)
+    set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
+
+    dataset = get_dataset(config['data']['name'])(**config['data'])
+    model = get_model(config['model']['name'])(
+        dataset.get_tf_datasets(), **config['model'])
+
+    model.load(output_dir)
+    results = model.evaluate(config.get('eval_set', 'test'), max_iterations=n_iter)
     return results
 
 
 def predict(config, output_dir, n_iter):
     pred = []
     data = []
-    with _init_graph(config, with_dataset=True) as (net, dataset):
-        if net.trainable:
-            net.load(output_dir)
-        test_set = dataset.get_test_set()
-        for _ in range(n_iter):
-            data.append(next(test_set))
-            pred.append(net.predict(data[-1], keys='*'))
+
+    set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
+
+    dataset = get_dataset(config['data']['name'])(**config['data'])
+    model = get_model(config['model']['name'])(data={}, **config['model'])
+
+    if model.trainable:
+        model.load(output_dir)
+    test_set = dataset.get_test_set()
+    for _ in range(n_iter):
+        data.append(next(test_set))
+        pred.append(model.predict(data[-1], keys='*'))
     return pred, data
 
 
 def set_seed(seed):
     tf.random.set_seed(seed)
     np.random.seed(seed)
-
-
-@contextmanager
-def _init_graph(config, with_dataset=False):
-    set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
-
-    dataset = get_dataset(config['data']['name'])(**config['data'])
-    model = get_model(config['model']['name'])(
-        data={} if with_dataset else dataset.get_tf_datasets(), **config['model'])
-    model.__enter__()
-    if with_dataset:
-        yield model, dataset
-    else:
-        yield model
-    model.__exit__()
-    tf.reset_default_graph()
 
 
 def _cli_train(config, output_dir, args):

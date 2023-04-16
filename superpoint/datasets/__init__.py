@@ -1,4 +1,8 @@
-def get_dataset(name):
+from base_dataset import BaseDataset
+from collections.abc import Callable
+
+
+def get_dataset(name) -> Callable[..., BaseDataset]:
     mod = __import__('superpoint.datasets.{}'.format(name), fromlist=[''])
     return getattr(mod, _module_to_class(name))
 
