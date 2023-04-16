@@ -7,23 +7,26 @@ from .backbones.vgg import vgg_block
 def detector_head(inputs, **config):
     params_conv = {'padding': 'SAME', 'data_format': config['data_format'],
                    'batch_normalization': True,
-                   'training': config['training'],
                    'kernel_reg': config.get('kernel_reg', 0.)}
     cfirst = config['data_format'] == 'channels_first'
     cindex = 1 if cfirst else -1  # index of the channel
 
-    with tf.variable_scope('detector', reuse=tf.AUTO_REUSE):
-        x = vgg_block(inputs, 256, 3, 'conv1',
-                      activation=tf.nn.relu, **params_conv)
-        x = vgg_block(x, 1 + pow(config['grid_size'], 2), 1, 'conv2',
-                      activation=None, **params_conv)
+    x = vgg_block(inputs, 256, 3,
+                  activation=tf.nn.relu, **params_conv)
+    x = vgg_block(x, 1 + pow(config['grid_size'], 2), 1,
+                  activation=None, **params_conv)
 
-        prob = tf.nn.softmax(x, axis=cindex)
-        # Strip the extra “no interest point” dustbin
-        prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
-        prob = tf.depth_to_space(
-            prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
-        prob = tf.squeeze(prob, axis=cindex)
+    prob = tf.keras.layers.Softmax(axis=cindex)(x)
+    # Strip the extra “no interest point” dustbin
+    # prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
+    prob = tf.keras.layers.Lambda(
+        lambda x: x[:, :-1, :, :] if cfirst else x[:, :, :, :-1])(prob)
+    prob = tf.keras.layers.Lambda(lambda x: tf.nn.depth_to_space(
+        x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC'))(prob)
+    # prob = tf.depth_to_space(
+    #     prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
+    # prob = tf.squeeze(prob, axis=cindex)
+    prob = tf.keras.layers.Lambda(lambda rax: tf.squeeze(x, axis=cindex))
 
     return {'logits': x, 'prob': prob}
 
@@ -31,22 +34,22 @@ def detector_head(inputs, **config):
 def descriptor_head(inputs, **config):
     params_conv = {'padding': 'SAME', 'data_format': config['data_format'],
                    'batch_normalization': True,
-                   'training': config['training'],
                    'kernel_reg': config.get('kernel_reg', 0.)}
     cfirst = config['data_format'] == 'channels_first'
     cindex = 1 if cfirst else -1  # index of the channel
 
-    with tf.variable_scope('descriptor', reuse=tf.AUTO_REUSE):
-        x = vgg_block(inputs, 256, 3, 'conv1',
-                      activation=tf.nn.relu, **params_conv)
-        x = vgg_block(x, config['descriptor_size'], 1, 'conv2',
-                      activation=None, **params_conv)
+    x = vgg_block(inputs, 256, 3,
+                  activation=tf.nn.relu, **params_conv)
+    x = vgg_block(x, config['descriptor_size'], 1,
+                  activation=None, **params_conv)
 
-        desc = tf.transpose(x, [0, 2, 3, 1]) if cfirst else x
-        desc = tf.image.resize_bilinear(
-            desc, config['grid_size'] * tf.shape(desc)[1:3])
-        desc = tf.transpose(desc, [0, 3, 1, 2]) if cfirst else desc
-        desc = tf.nn.l2_normalize(desc, cindex)
+    desc = tf.keras.layers.Lambda(
+        lambda x: tf.transpose(x, [0, 2, 3, 1]) if cfirst else x)
+    desc = tf.keras.layers.Lambda(lambda x: tf.image.resize_bilinear(
+        x, config['grid_size'] * tf.shape(x)[1:3]))
+    desc = tf.keras.layers.Lambda(
+        lambda x: tf.transpose(x, [0, 3, 1, 2]) if cfirst else x)
+    desc = tf.keras.layers.Lambda(lambda x: tf.nn.l2_normalize(x, cindex))
 
     return {'descriptors_raw': x, 'descriptors': desc}
 
@@ -54,17 +57,17 @@ def descriptor_head(inputs, **config):
 def detector_loss(keypoint_map, logits, valid_mask=None, **config):
     # Convert the boolean labels to indices including the "no interest point" dustbin
     labels = tf.cast(keypoint_map[..., tf.newaxis], tf.float32)  # for GPU
-    labels = tf.space_to_depth(labels, config['grid_size'])
+    labels = tf.nn.space_to_depth(labels, config['grid_size'])
     shape = tf.concat([tf.shape(labels)[:3], [1]], axis=0)
     labels = tf.concat([2 * labels, tf.ones(shape)], 3)
     # Add a small random matrix to randomly break ties in argmax
-    labels = tf.argmax(labels + tf.random_uniform(tf.shape(labels), 0, 0.1),
+    labels = tf.argmax(labels + tf.random.uniform(tf.shape(labels), 0, 0.1),
                        axis=3)
 
     # Mask the pixels if bordering artifacts appear
     valid_mask = tf.ones_like(keypoint_map) if valid_mask is None else valid_mask
     valid_mask = tf.cast(valid_mask[..., tf.newaxis], tf.float32)  # for GPU
-    valid_mask = tf.space_to_depth(valid_mask, config['grid_size'])
+    valid_mask = tf.nn.space_to_depth(valid_mask, config['grid_size'])
     valid_mask = tf.reduce_prod(valid_mask, axis=3)  # AND along the channel dim
 
     loss = tf.losses.sparse_softmax_cross_entropy(
