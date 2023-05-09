@@ -65,7 +65,7 @@ class Coco(BaseDataset):
         is_training = split_name == 'training'
 
         def _read_image(path):
-            image = tf.read_file(path)
+            image = tf.io.read_file(path)
             image = tf.image.decode_png(image, channels=3)
             return tf.cast(image, tf.float32)
 
@@ -89,7 +89,7 @@ class Coco(BaseDataset):
         # Add keypoints
         if has_keypoints:
             kp = tf.data.Dataset.from_tensor_slices(files['label_paths'])
-            kp = kp.map(lambda path: tf.py_func(_read_points, [path], tf.float32))
+            kp = kp.map(lambda path: tf.numpy_function(_read_points, [path], tf.float32))
             kp = kp.map(lambda points: tf.reshape(points, [-1, 2]))
             data = tf.data.Dataset.zip((data, kp)).map(
                 lambda d, k: {**d, 'keypoints': k})

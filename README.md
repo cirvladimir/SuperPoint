@@ -42,7 +42,7 @@ Repeatability on HPatches computed with 300 points detected in common between pa
     <td>0.629</td>
   </tr>
 </table>
-   
+
  ### Descriptors evaluation
 Homography estimation on HPatches computed with a maximum of 1000 points detected in common between pairs of images, a threshold of correctness of 3 and with a NMS of 8:
  <table style="width:100%">
@@ -72,7 +72,7 @@ Homography estimation on HPatches computed with a maximum of 1000 points detecte
     <td>0.414</td>
   </tr>
 </table>
- 
+
 Homography estimation on HPatches computed with a maximum of 1000 points detected in common between pairs of images, with all kind of changes (viewpoint and illumination) and with a NMS of 8:
  <table style="width:100%">
   <tr>
@@ -205,3 +205,24 @@ python superpoint/experiment.py train superpoint/configs/superpoint_coco.yaml su
 
 ## Credits
 This implementation was developed by [Rémi Pautrat](https://github.com/rpautrat) and [Paul-Edouard Sarlin](https://github.com/Skydes). Please contact Rémi for any enquiry.
+
+## 2.0 Upgrade Notes
+
+### Latest point
+
+I'm running this command:
+
+```
+python3.11 experiment.py train configs/magic-point_shapes.yaml magic-point_synth
+```
+
+It passes data generation stuff, and fails on model.
+
+I still have to rewrite the model into the tensorflow 2 paradigm.
+
+### General
+
+* Remember to install python3.11.
+* export TMPDIR=/tmp
+
+### Possible errors

@@ -66,10 +66,10 @@ def homography_adaptation(image, net, config):
             with tf.device('/cpu:0'):
                 count = tf.nn.erosion2d(
                     count, tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
-                    [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[..., 0] + 1.
+                    [1, 1, 1, 1], 'SAME', 'NHWC', [1, 1, 1, 1])[..., 0] + 1.
                 mask = tf.nn.erosion2d(
                     mask, tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
-                    [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[..., 0] + 1.
+                    [1, 1, 1, 1], 'SAME', 'NHWC', [1, 1, 1, 1])[..., 0] + 1.
 
         # Predict detection probabilities
         prob = net(warped)['prob']
@@ -161,10 +161,12 @@ def sample_homography(
         if not allow_artifacts:
             perspective_amplitude_x = min(perspective_amplitude_x, margin)
             perspective_amplitude_y = min(perspective_amplitude_y, margin)
-        perspective_displacement = tf.truncated_normal(
+        perspective_displacement = tf.random.truncated_normal(
             [1], 0., perspective_amplitude_y / 2)
-        h_displacement_left = tf.truncated_normal([1], 0., perspective_amplitude_x / 2)
-        h_displacement_right = tf.truncated_normal([1], 0., perspective_amplitude_x / 2)
+        h_displacement_left = tf.random.truncated_normal(
+            [1], 0., perspective_amplitude_x / 2)
+        h_displacement_right = tf.random.truncated_normal(
+            [1], 0., perspective_amplitude_x / 2)
         pts2 += tf.stack([tf.concat([h_displacement_left, perspective_displacement], 0),
                           tf.concat([h_displacement_left, -perspective_displacement], 0),
                           tf.concat([h_displacement_right, perspective_displacement], 0),
@@ -175,7 +177,7 @@ def sample_homography(
     # sample several scales, check collision with borders, randomly pick a valid one
     if scaling:
         scales = tf.concat(
-            [[1.], tf.truncated_normal([n_scales], 1, scaling_amplitude / 2)], 0)
+            [[1.], tf.random.truncated_normal([n_scales], 1, scaling_amplitude / 2)], 0)
         center = tf.reduce_mean(pts2, axis=0, keepdims=True)
         scaled = tf.expand_dims(pts2 - center, axis=0) * tf.expand_dims(
             tf.expand_dims(scales, 1), 1) + center
@@ -184,7 +186,7 @@ def sample_homography(
         else:
             valid = tf.where(tf.reduce_all(
                 (scaled >= 0.) & (scaled <= 1.), [1, 2]))[:, 0]
-        idx = valid[tf.random_uniform((), maxval=tf.shape(valid)[0], dtype=tf.int32)]
+        idx = valid[tf.random.uniform((), maxval=tf.shape(valid)[0], dtype=tf.int32)]
         pts2 = scaled[idx]
 
     # Random translation
@@ -193,14 +195,14 @@ def sample_homography(
         if allow_artifacts:
             t_min += translation_overflow
             t_max += translation_overflow
-        pts2 += tf.expand_dims(tf.stack([tf.random_uniform((), -t_min[0], t_max[0]),
-                                         tf.random_uniform((), -t_min[1], t_max[1])]),
+        pts2 += tf.expand_dims(tf.stack([tf.random.uniform((), -t_min[0], t_max[0]),
+                                         tf.random.uniform((), -t_min[1], t_max[1])]),
                                axis=0)
 
     # Random rotation
     # sample several rotations, check collision with borders, randomly pick a valid one
     if rotation:
-        angles = tf.lin_space(tf.constant(-max_angle), tf.constant(max_angle), n_angles)
+        angles = tf.linspace(-max_angle, max_angle, n_angles)
         angles = tf.concat([[0.], angles], axis=0)  # in case no rotation is valid
         center = tf.reduce_mean(pts2, axis=0, keepdims=True)
         rot_mat = tf.reshape(tf.stack([tf.cos(angles), -tf.sin(angles), tf.sin(angles),
@@ -213,7 +215,7 @@ def sample_homography(
         else:
             valid = tf.where(tf.reduce_all((rotated >= 0.) & (rotated <= 1.),
                                            axis=[1, 2]))[:, 0]
-        idx = valid[tf.random_uniform((), maxval=tf.shape(valid)[0], dtype=tf.int32)]
+        idx = valid[tf.random.uniform((), maxval=tf.shape(valid)[0], dtype=tf.int32)]
         pts2 = rotated[idx]
 
     # Rescale to actual size
@@ -228,7 +230,7 @@ def sample_homography(
     a_mat = tf.stack([f(pts1[i], pts2[i]) for i in range(4) for f in (ax, ay)], axis=0)
     p_mat = tf.transpose(tf.stack(
         [[pts2[i][j] for i in range(4) for j in range(2)]], axis=0))
-    homography = tf.transpose(tf.matrix_solve_ls(a_mat, p_mat, fast=True))
+    homography = tf.transpose(tf.linalg.lstsq(a_mat, p_mat, fast=True))
     return homography
 
 
@@ -236,7 +238,7 @@ def invert_homography(H):
     """
     Computes the inverse transformation for a flattened homography transformation.
     """
-    return mat2flat(tf.matrix_inverse(flat2mat(H)))
+    return mat2flat(tf.linalg.inv(flat2mat(H)))
 
 
 def flat2mat(H):
@@ -275,7 +277,7 @@ def compute_valid_mask(image_shape, homography, erosion_radius=0):
         mask = tf.nn.erosion2d(
             mask[tf.newaxis, ..., tf.newaxis],
             tf.cast(tf.constant(kernel)[..., tf.newaxis], tf.float32),
-            [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')[0, ..., 0] + 1.
+            [1, 1, 1, 1], 'SAME', 'NHWC', [1, 1, 1, 1])[0, ..., 0] + 1.
     return tf.cast(mask, tf.int32)
 
 

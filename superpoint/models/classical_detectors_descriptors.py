@@ -68,7 +68,7 @@ class ClassicalDetectorsDescriptors(BaseModel):
     def _model(self, inputs, mode, **config):
         im = inputs['image']
         with tf.device('/cpu:0'):
-            keypoints, descriptors = tf.map_fn(lambda i: tf.py_func(
+            keypoints, descriptors = tf.map_fn(lambda i: tf.numpy_function(
                 lambda x: classical_detector_descriptor(x, **config),
                 [i],
                 (tf.float32, tf.float32)),

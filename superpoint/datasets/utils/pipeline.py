@@ -1,6 +1,7 @@
 import tensorflow as tf
 import cv2 as cv
 import numpy as np
+from tensorflow_addons.image import transform as H_transform
 
 from superpoint.datasets.utils import photometric_augmentation as photaug
 from superpoint.models.homographies import (sample_homography, compute_valid_mask,
@@ -22,7 +23,7 @@ def photometric_augmentation(data, **config):
 
         indices = tf.range(len(primitives))
         if config['random_order']:
-            indices = tf.random_shuffle(indices)
+            indices = tf.random.shuffle(indices)
 
         def step(i, image):
             fn_pairs = [(tf.equal(indices[i], j),
@@ -41,7 +42,7 @@ def homographic_augmentation(data, add_homography=False, **config):
     with tf.name_scope('homographic_augmentation'):
         image_shape = tf.shape(data['image'])[:2]
         homography = sample_homography(image_shape, **config['params'])[0]
-        warped_image = tf.contrib.image.transform(
+        warped_image = H_transform(
             data['image'], homography, interpolation='BILINEAR')
         valid_mask = compute_valid_mask(image_shape, homography,
                                         config['valid_border_margin'])

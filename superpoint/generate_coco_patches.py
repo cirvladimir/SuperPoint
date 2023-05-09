@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # Create the ops to warp an image
     tf_path = tf.placeholder(tf.string)
     # Read the image
-    image = tf.read_file(tf_path)
+    image = tf.io.read_file(tf_path)
     image = tf.image.decode_jpeg(image, channels=3)
     image = _preprocess(image)
     shape = tf.shape(image)[:2]

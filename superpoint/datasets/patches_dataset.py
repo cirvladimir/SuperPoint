@@ -100,10 +100,10 @@ class PatchesDataset(BaseDataset):
             return tf.shape(image)[:2]
 
         images = tf.data.Dataset.from_tensor_slices(files['image_paths'])
-        images = images.map(lambda path: tf.py_func(_read_image, [path], tf.uint8))
+        images = images.map(lambda path: tf.numpy_function(_read_image, [path], tf.uint8))
         homographies = tf.data.Dataset.from_tensor_slices(np.array(files['homography']))
         warped_images = tf.data.Dataset.from_tensor_slices(files['warped_image_paths'])
-        warped_images = warped_images.map(lambda path: tf.py_func(_read_image,
+        warped_images = warped_images.map(lambda path: tf.numpy_function(_read_image,
                                                                   [path],
                                                                   tf.uint8))
         if config['preprocessing']['resize']:

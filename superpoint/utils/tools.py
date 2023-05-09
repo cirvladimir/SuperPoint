@@ -1,6 +1,3 @@
-import collections
-
-
 def dict_update(d, u):
     """Improved update for nested dictionaries.
 
@@ -12,7 +9,7 @@ def dict_update(d, u):
         The updated dictionary.
     """
     for k, v in u.items():
-        if isinstance(v, collections.Mapping):
+        if isinstance(v, dict):
             d[k] = dict_update(d.get(k, {}), v)
         else:
             d[k] = v
