@@ -122,20 +122,22 @@ class SyntheticShapes(BaseDataset):
         splits = {s: {'images': [], 'points': []}
                   for s in ['training', 'validation', 'test']}
         for primitive in primitives:
-            tar_path = Path(basepath, '{}.tar.gz'.format(primitive))
-            if not tar_path.exists():
-                self.dump_primitive_data(primitive, tar_path, config)
-
-            # Untar locally
-            logging.info('Extracting archive for primitive {}.'.format(primitive))
-            tar = tarfile.open(tar_path)
             temp_dir = Path(os.environ['TMPDIR'])
-            tar.extractall(path=temp_dir)
-            tar.close()
+            path = temp_dir / primitive
+
+            if not path.exists():
+                tar_path = Path(basepath, '{}.tar.gz'.format(primitive))
+                if not tar_path.exists():
+                    self.dump_primitive_data(primitive, tar_path, config)
+
+                # Untar locally
+                logging.info('Extracting archive for primitive {}.'.format(primitive))
+                tar = tarfile.open(tar_path)
+                tar.extractall(path=temp_dir)
+                tar.close()
 
             # Gather filenames in all splits, optionally truncate
             truncate = config['truncate'].get(primitive, 1)
-            path = Path(temp_dir, primitive)
             for s in splits:
                 e = [str(p) for p in Path(path, 'images', s).iterdir()]
                 f = [p.replace('images', 'points') for p in e]
