@@ -5,4 +5,6 @@ RUN apt update && apt install -y openssh-client libgl1
 RUN pip3 install opencv-contrib-python==4.7.0.72 tqdm==4.65.0 tensorflow-addons==0.19.0
 
 RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-    && echo "$SNIPPET" >> "/root/.bashrc"
+    && echo "$SNIPPET" >> "/root/.bashrc" && \
+    echo "export TMPDIR=/tmp" >> "/root/.bashrc" && \
+    sed -i 's/#force_color_prompt/force_color_prompt/' ~/.bashrc
