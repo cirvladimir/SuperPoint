@@ -5,6 +5,16 @@ from .backbones.vgg import vgg_backbone
 from .utils import detector_head, detector_loss, box_nms
 from .homographies import homography_adaptation
 
+from superpoint.utils.tools import dict_update
+
+
+class MagicPointModel(tf.keras.Model):
+    def __init__(self):
+        super(MagicPointModel, self).__init__()
+
+    def call(self, x):
+        pass
+
 
 class MagicPoint(BaseModel):
     input_spec = {
@@ -21,9 +31,14 @@ class MagicPoint(BaseModel):
         'top_k': 0
     }
 
-    def _model(self, inputs, mode, **config):
+    def _model(self, mode, **config):
+        config = dict_update(self.default_config,
+                             config)
         config['training'] = (mode == Mode.TRAIN)
-        image = inputs['image']
+
+        inputs = tf.keras.Input(shape=(120, 160, 1))
+
+        image = inputs
 
         def net(image):
             if config['data_format'] == 'channels_first':
@@ -33,32 +48,34 @@ class MagicPoint(BaseModel):
             return outputs
 
         if (mode == Mode.PRED) and config['homography_adaptation']['num']:
-            outputs = homography_adaptation(image, net, config['homography_adaptation'])
+            prob = homography_adaptation(image, net, config['homography_adaptation'])
         else:
-            outputs = net(image)
+            prob = net(image)
 
-        prob = outputs['prob']
-        if config['nms']:
-            prob = tf.map_fn(lambda p: box_nms(p, config['nms'],
-                                               min_prob=config['detection_threshold'],
-                                               keep_top_k=config['top_k']), prob)
-            outputs['prob_nms'] = prob
-        pred = tf.cast(tf.greater_equal(prob, config['detection_threshold']), tf.int32)
-        outputs['pred'] = pred
+        # TODO: Make non-maximum supporession work
+        # if config['nms']:
+        #     prob = box_nms(prob, config['nms'],
+        #                    min_prob=config['detection_threshold'],
+        #                    keep_top_k=config['top_k'])
+        print(prob)
+        print(type(prob))
+        detection_threshold = tf.constant(
+            [config['detection_threshold']], tf.float32, (1,))
+        pred = tf.keras.layers.Lambda(lambda x: tf.cast(
+            tf.greater_equal(x, detection_threshold), tf.int32), name="Afdsafs")(prob)
+        # pred = tf.cast(tf.greater_equal(prob, detection_threshold), tf.int32)
 
-        return outputs
+        model = tf.keras.Model(inputs=inputs, outputs=pred)
 
-    def _loss(self, outputs, inputs, **config):
-        if config['data_format'] == 'channels_first':
-            outputs['logits'] = tf.transpose(outputs['logits'], [0, 2, 3, 1])
-        return detector_loss(inputs['keypoint_map'], outputs['logits'],
-                             valid_mask=inputs['valid_mask'], **config)
+        # Define a custom loss function that computes the loss based on the logits layer
+        def custom_loss(y_true, y_pred):
+            # logits = model.layers[-2].output  # Get the logits layer
+            logits = prob
+            loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+                labels=y_true, logits=logits))
+            return loss
 
-    def _metrics(self, outputs, inputs, **config):
-        pred = inputs['valid_mask'] * outputs['pred']
-        labels = inputs['keypoint_map']
+        # Compile the model with the custom loss function
+        model.compile(optimizer='adam', loss=custom_loss)
 
-        precision = tf.reduce_sum(pred * labels) / tf.reduce_sum(pred)
-        recall = tf.reduce_sum(pred * labels) / tf.reduce_sum(labels)
-
-        return {'precision': precision, 'recall': recall}
+        return model

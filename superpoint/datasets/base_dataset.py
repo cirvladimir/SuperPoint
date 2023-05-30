@@ -38,7 +38,7 @@ class BaseDataset(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def _get_data(self, dataset, split_name, **config):
+    def _get_data(self, dataset, split_name, **config) -> tf.data.Dataset:
         """Reads the dataset splits using the Tensorflow `tf.data` API.
 
         This method should create a `tf.data.Dataset` object for the given data split,
@@ -68,7 +68,7 @@ class BaseDataset(metaclass=ABCMeta):
         """
         return self.tf_splits
 
-    def get_training_set(self):
+    def get_training_set(self) -> tf.data.Dataset:
         """Processed training set.
 
         Returns:
@@ -77,7 +77,7 @@ class BaseDataset(metaclass=ABCMeta):
         """
         return self.tf_splits['training']
 
-    def get_validation_set(self):
+    def get_validation_set(self) -> tf.data.Dataset:
         """Processed validation set.
 
         Returns:
@@ -86,7 +86,7 @@ class BaseDataset(metaclass=ABCMeta):
         """
         return self.tf_splits['validation']
 
-    def get_test_set(self):
+    def get_test_set(self) -> tf.data.Dataset:
         """Processed test set.
 
         Returns:

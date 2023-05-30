@@ -4,6 +4,12 @@ from .homographies import warp_points
 from .backbones.vgg import vgg_block
 
 
+@tf.function(experimental_compile=True)
+def my_depth_to_space(x, config, cfirst):
+    return tf.nn.depth_to_space(
+        x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
+
+
 def detector_head(inputs, **config):
     params_conv = {'padding': 'SAME', 'data_format': config['data_format'],
                    'batch_normalization': True,
@@ -21,14 +27,16 @@ def detector_head(inputs, **config):
     # prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
     prob = tf.keras.layers.Lambda(
         lambda x: x[:, :-1, :, :] if cfirst else x[:, :, :, :-1])(prob)
-    prob = tf.keras.layers.Lambda(lambda x: tf.nn.depth_to_space(
-        x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC'))(prob)
+    # prob = tf.keras.layers.Lambda(lambda x: tf.nn.depth_to_space(
+    #     x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC'))(prob)
+    prob = tf.keras.layers.Lambda(lambda x: my_depth_to_space(x, config, cfirst))(prob)
     # prob = tf.depth_to_space(
     #     prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
     # prob = tf.squeeze(prob, axis=cindex)
-    prob = tf.keras.layers.Lambda(lambda rax: tf.squeeze(x, axis=cindex))
+    prob = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=cindex))(prob)
 
-    return {'logits': x, 'prob': prob}
+    # return {'logits': x, 'prob': prob}
+    return prob
 
 
 def descriptor_head(inputs, **config):
@@ -179,19 +187,17 @@ def box_nms(prob, size, iou=0.1, min_prob=0.01, keep_top_k=0):
         min_prob: a threshold under which all probabilities are discarded before NMS.
         keep_top_k: an integer, the number of top scores to keep.
     """
-    with tf.name_scope('box_nms'):
-        pts = tf.cast(tf.where(tf.greater_equal(prob, min_prob)), tf.float32)
-        size = tf.constant(size / 2.)
-        boxes = tf.concat([pts - size, pts + size], axis=1)
-        scores = tf.gather_nd(prob, tf.cast(pts, tf.int32))
-        with tf.device('/cpu:0'):
-            indices = tf.image.non_max_suppression(
-                boxes, scores, tf.shape(boxes)[0], iou)
+    pts = tf.cast(tf.where(tf.greater_equal(prob, tf.constant(min_prob))), tf.float32)
+    size = tf.constant(size / 2.)
+    boxes = tf.concat([pts - size, pts + size], axis=1)
+    scores = tf.gather_nd(prob, tf.cast(pts, tf.int32))
+    indices = tf.image.non_max_suppression(
+        boxes, scores, tf.shape(boxes)[0], iou)
+    pts = tf.gather(pts, indices)
+    scores = tf.gather(scores, indices)
+    if keep_top_k:
+        k = tf.minimum(tf.shape(scores)[0], tf.constant(keep_top_k))  # when fewer
+        scores, indices = tf.nn.top_k(scores, k)
         pts = tf.gather(pts, indices)
-        scores = tf.gather(scores, indices)
-        if keep_top_k:
-            k = tf.minimum(tf.shape(scores)[0], tf.constant(keep_top_k))  # when fewer
-            scores, indices = tf.nn.top_k(scores, k)
-            pts = tf.gather(pts, indices)
-        prob = tf.scatter_nd(tf.cast(pts, tf.int32), scores, tf.shape(prob))
+    prob = tf.scatter_nd(tf.cast(pts, tf.int32), scores, tf.shape(prob))
     return prob

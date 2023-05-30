@@ -11,6 +11,9 @@ from superpoint.models import get_model
 from superpoint.utils.stdout_capturing import capture_outputs
 from superpoint.settings import EXPER_PATH
 
+from tensorflow.python.framework.ops import disable_eager_execution
+disable_eager_execution()
+
 logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 import tensorflow as tf  # noqa: E402
@@ -23,6 +26,7 @@ def train(config, n_iter, output_dir, pretrained_dir=None,
     set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
 
     dataset = get_dataset(config['data']['name'])(**config['data'])
+    print(dataset.get_training_set().element_spec)
     model = get_model(config['model']['name'])(
         dataset.get_tf_datasets(), **config['model'])
 
@@ -36,7 +40,8 @@ def train(config, n_iter, output_dir, pretrained_dir=None,
                     keep_checkpoints=config.get('keep_checkpoints', 1))
     except KeyboardInterrupt:
         logging.info('Got Keyboard Interrupt, saving model and closing.')
-    model.save(os.path.join(output_dir, checkpoint_name))
+    # TODO: Figure out what goes here:
+    # model.save(os.path.join(output_dir, checkpoint_name))
 
 
 def evaluate(config, output_dir, n_iter=None):

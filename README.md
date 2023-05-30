@@ -220,6 +220,10 @@ It passes data generation stuff, and fails on model.
 
 I still have to rewrite the model into the tensorflow 2 paradigm.
 
+There are three ways to make keras models. I'm going with the functional way. See this: https://pyimagesearch.com/2019/10/28/3-ways-to-create-a-keras-model-with-tensorflow-2-0-sequential-functional-and-model-subclassing/
+
+So far I think most of BaseModel is unnecessary. However, I'm still keeping it.
+
 ### General
 
 * Remember to install python3.11.
