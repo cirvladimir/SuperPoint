@@ -67,7 +67,7 @@ class BaseModel(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
-    def __init__(self, data={}, n_gpus=1, data_shape=None, **config):
+    def __init__(self, mode, data={}, n_gpus=1, data_shape=None, **config):
         self.datasets = data
         self.data_shape = data_shape
         self.n_gpus = n_gpus
@@ -85,14 +85,14 @@ class BaseModel(metaclass=ABCMeta):
         assert set(self.datasets) <= self.dataset_names, \
             'Unknown dataset name: {}'.format(set(self.datasets) - self.dataset_names)
 
+        self.model = self._model(mode=mode, **self.config)
+
     def train(self, iterations, validation_interval=100, output_dir=None, profile=False,
               save_interval=None, checkpoint_path=None, keep_checkpoints=1):
         assert self.trainable, 'Model is not trainable.'
         assert 'training' in self.datasets, 'Training dataset is required.'
 
         logging.info('Start training')
-
-        model = self._model(mode=Mode.TRAIN, **self.config)
 
         # print(model.summary())
         # tf.keras.utils.plot_model(model, show_shapes=True)
@@ -108,25 +108,8 @@ class BaseModel(metaclass=ABCMeta):
         tensorboard_callback = tf.keras.callbacks.TensorBoard(
             log_dir=log_dir, histogram_freq=1)
 
-        # Trying to get the graph.... unsuccesfully
-        # tf.summary.trace_on(graph=True)
-        # model(tf.zeros((1, 120, 160, 1)))
-
-        # # Export the trace
-        # with tf.summary.create_file_writer(log_dir).as_default():
-        #     # Run a forward pass through the model
-        #     # Replace the input shape with an example input shape
-        #     tf.summary.trace_export(name="model_trace", step=0, profiler_outdir=log_dir)
-
-        # writer = tf.summary.FileWriter(log_dir)
-        # writer.add_graph(tf.compat.v1.get_default_graph())
-        # writer.flush()
-
-        # # Close the writer
-        # writer.close()
-
-        model.fit(self.datasets["training"].map(
-            lambda data: (data["image"], data["keypoint_map"])).batch(100),
+        self.model.fit(self.datasets["training"].map(
+            lambda data: (data["image"], data["keypoint_map"])).batch(100).take(3),
             callbacks=[tensorboard_callback])
 
         # Old tensorflow 1 code:
@@ -211,17 +194,12 @@ class BaseModel(metaclass=ABCMeta):
         metrics = {m: np.nanmean(metrics[m], axis=0) for m in metrics}
         return metrics
 
-    def load(self, checkpoint_path):
-        with tf.device('/cpu:0'):
-            saver = tf.train.Saver(save_relative_paths=True)
-        if tf.gfile.IsDirectory(checkpoint_path):
-            checkpoint_path = tf.train.latest_checkpoint(checkpoint_path)
-            if checkpoint_path is None:
-                raise ValueError('Checkpoint directory is empty.')
-        saver.restore(self.sess, checkpoint_path)
+    def load(self, path):
+        logging.info('Saving model')
+        # self.model.save(path)
+        self.model.load_weights(path / "weights")
 
-    def save(self, checkpoint_path):
-        step = self.sess.run(self.global_step)
-        logging.info('Saving checkpoint for iteration #{}'.format(step))
-        self.saver.save(self.sess, checkpoint_path, write_meta_graph=False,
-                        global_step=step)
+    def save(self, path):
+        logging.info('Saving model')
+        # self.model.save(path)
+        self.model.save_weights(path / "weights")

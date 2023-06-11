@@ -5,6 +5,8 @@ import argparse
 import numpy as np
 from contextlib import contextmanager
 from json import dumps as pprint
+from pathlib import Path
+import cv2
 
 from superpoint.datasets import get_dataset
 from superpoint.models import get_model
@@ -18,30 +20,30 @@ logging.basicConfig(format='[%(asctime)s %(levelname)s] %(message)s',
                     datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 import tensorflow as tf  # noqa: E402
 
+from models.base_model import Mode
 
-def train(config, n_iter, output_dir, pretrained_dir=None,
-          checkpoint_name='model.ckpt'):
-    checkpoint_path = os.path.join(output_dir, checkpoint_name)
+
+def train(config, n_iter, output_dir, pretrained_dir=None):
 
     set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
 
     dataset = get_dataset(config['data']['name'])(**config['data'])
     print(dataset.get_training_set().element_spec)
-    model = get_model(config['model']['name'])(
+    model = get_model(config['model']['name'])(Mode.TRAIN,
         dataset.get_tf_datasets(), **config['model'])
 
     if pretrained_dir is not None:
         model.load(pretrained_dir)
     try:
-        model.train(n_iter, output_dir=output_dir,
+        model.train(n_iter, output_dir=str(output_dir),
                     validation_interval=config.get('validation_interval', 100),
                     save_interval=config.get('save_interval', None),
-                    checkpoint_path=checkpoint_path,
+                    checkpoint_path=None,
                     keep_checkpoints=config.get('keep_checkpoints', 1))
     except KeyboardInterrupt:
         logging.info('Got Keyboard Interrupt, saving model and closing.')
-    # TODO: Figure out what goes here:
-    # model.save(os.path.join(output_dir, checkpoint_name))
+
+    model.save(output_dir / "saved_model")
 
 
 def evaluate(config, output_dir, n_iter=None):
@@ -56,22 +58,21 @@ def evaluate(config, output_dir, n_iter=None):
     return results
 
 
-def predict(config, output_dir, n_iter):
-    pred = []
-    data = []
+def predict(config, output_dir, input_image):
+    model = get_model(config['model']['name'])(Mode.PRED, **config['model'])
 
-    set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
+    model.load(output_dir / "saved_model")
 
-    dataset = get_dataset(config['data']['name'])(**config['data'])
-    model = get_model(config['model']['name'])(data={}, **config['model'])
-
-    if model.trainable:
-        model.load(output_dir)
-    test_set = dataset.get_test_set()
-    for _ in range(n_iter):
-        data.append(next(test_set))
-        pred.append(model.predict(data[-1], keys='*'))
-    return pred, data
+    image = cv2.imread(input_image, cv2.IMREAD_UNCHANGED)
+    model_input = image.reshape(1, 120, 160, 1)
+    # pred = model.model(image)
+    pred = model.model.predict(model_input, steps=1)
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+    cv2.imwrite("input.png", rgb_image)
+    rgb_image[:,:,2] = np.maximum(rgb_image[:,:,2], pred[0] * 255)
+    cv2.imwrite("prediction.png", rgb_image)
+    # tf.io.write_file("prediction.png", tf.io.encode_png(pred))
+    print("fasdfsadf")
 
 
 def set_seed(seed):
@@ -92,7 +93,7 @@ def _cli_train(config, output_dir, args):
     else:
         pretrained_dir = None
 
-    train(config, config['train_iter'], output_dir, pretrained_dir)
+    train(config, config['train_iter'], Path(output_dir), pretrained_dir)
 
     if args.eval:
         _cli_eval(config, output_dir, args)
@@ -117,9 +118,11 @@ def _cli_eval(config, output_dir, args):
         f.write('\n')
 
 
-# TODO
-def _cli_pred(config, args):
-    raise NotImplementedError
+def _cli_pred(config, output_dir, args):
+    with open(os.path.join(output_dir, 'config.yml'), 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+    predict(config, Path(output_dir), args.input_image)
 
 
 if __name__ == '__main__':
@@ -144,6 +147,7 @@ if __name__ == '__main__':
     p_predict = subparsers.add_parser('predict')
     p_predict.add_argument('config', type=str)
     p_predict.add_argument('exper_name', type=str)
+    p_predict.add_argument('input_image', type=str)
     p_predict.set_defaults(func=_cli_pred)
 
     args = parser.parse_args()
