@@ -126,7 +126,7 @@ class BaseModel(metaclass=ABCMeta):
         # writer.close()
 
         model.fit(self.datasets["training"].map(
-            lambda data: (data["image"], data["keypoint_map"])),
+            lambda data: (data["image"], data["keypoint_map"])).batch(100),
             callbacks=[tensorboard_callback])
 
         # Old tensorflow 1 code:

@@ -57,8 +57,8 @@ class MagicPoint(BaseModel):
         #     prob = box_nms(prob, config['nms'],
         #                    min_prob=config['detection_threshold'],
         #                    keep_top_k=config['top_k'])
-        print(prob)
-        print(type(prob))
+        # print(prob)
+        # print(type(prob))
         detection_threshold = tf.constant(
             [config['detection_threshold']], tf.float32, (1,))
         pred = tf.keras.layers.Lambda(lambda x: tf.cast(
@@ -69,11 +69,12 @@ class MagicPoint(BaseModel):
 
         # Define a custom loss function that computes the loss based on the logits layer
         def custom_loss(y_true, y_pred):
+            return tf.keras.losses.MeanSquaredError()(y_true, prob)
             # logits = model.layers[-2].output  # Get the logits layer
-            logits = prob
-            loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-                labels=y_true, logits=logits))
-            return loss
+            # logits = prob
+            # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+            #     labels=y_true, logits=logits))
+            # return loss
 
         # Compile the model with the custom loss function
         model.compile(optimizer='adam', loss=custom_loss)

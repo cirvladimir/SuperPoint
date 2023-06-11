@@ -224,6 +224,18 @@ There are three ways to make keras models. I'm going with the functional way. Se
 
 So far I think most of BaseModel is unnecessary. However, I'm still keeping it.
 
+Update 6/11/2023:
+
+Base model is indeed unnecessary, I basically scaped most of it and am just calling _model().train(). Eventually I should completely get rid of it.
+
+My next question is how the head of the model (different during evaluation and training) is supposed to look. Currently there's a softmax being applied. As far as I know, 1) softmax shouldn't be there during training 2) softmax selects 1 class out of a probability list of many classes, while I actually want to select multiple classes. Multiple classes are multiple keypoints on the image.
+
+This github issue was really helpful: https://github.com/rpautrat/SuperPoint/issues/95
+
+Answer for 1: I think that we DO want the softmax during training. The whole point of it is that it has a gradient. If we just cared about choosing a class, we would use argmax, which just selects the highest number. However argmax isn't differentiable.
+
+Answers from the issue on 2: We softmax it to help with normalization during training. The original image HxW becomes (H/8)x(W/8)x65, we sort of take each 8x8 patch and make it into one channel. We apply softmax per pixel in this (H/8)x(W/8) image. This sort of says that there should only be one descriptor per patch. However, we threshold the probability for a pixel to be a keypoint by 1/64, so we can still have multiple keypoints per 8x8 patch. Although this whole architecture is a little weird in my opinions.
+
 ### General
 
 * Remember to install python3.11.

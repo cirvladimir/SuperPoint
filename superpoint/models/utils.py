@@ -25,8 +25,10 @@ def detector_head(inputs, **config):
     prob = tf.keras.layers.Softmax(axis=cindex)(x)
     # Strip the extra “no interest point” dustbin
     # prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
-    prob = tf.keras.layers.Lambda(
-        lambda x: x[:, :-1, :, :] if cfirst else x[:, :, :, :-1])(prob)
+    if cfirst:
+        prob = prob[:, :-1, :, :]
+    else:
+        prob = prob[:, :, :, :-1]
     # prob = tf.keras.layers.Lambda(lambda x: tf.nn.depth_to_space(
     #     x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC'))(prob)
     prob = tf.keras.layers.Lambda(lambda x: my_depth_to_space(x, config, cfirst))(prob)
