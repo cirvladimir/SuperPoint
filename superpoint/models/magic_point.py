@@ -8,12 +8,22 @@ from .homographies import homography_adaptation
 from superpoint.utils.tools import dict_update
 
 
-class MagicPointModel(tf.keras.Model):
-    def __init__(self):
-        super(MagicPointModel, self).__init__()
+class Threshold(tf.keras.layers.Layer):
+    def __init__(self, threshold, **kwargs):
+        super().__init__(**kwargs)
+        self.threshold = threshold
+        self.tf_threshold = tf.constant(
+            [self.threshold], tf.float32, (1,))
 
-    def call(self, x):
-        pass
+    def call(self, inputs):
+        return tf.cast(tf.greater_equal(inputs, self.tf_threshold), tf.int32)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "threshold": self.threshold
+        })
+        return config
 
 
 class MagicPoint(BaseModel):
@@ -36,7 +46,7 @@ class MagicPoint(BaseModel):
                              config)
         config['training'] = (mode == Mode.TRAIN)
 
-        inputs = tf.keras.Input(shape=(120, 160, 1))
+        inputs = tf.keras.Input(shape=(None, None, 1))
 
         image = inputs
 
@@ -59,24 +69,17 @@ class MagicPoint(BaseModel):
         #                    keep_top_k=config['top_k'])
         # print(prob)
         # print(type(prob))
-        detection_threshold = tf.constant(
-            [config['detection_threshold']], tf.float32, (1,))
-        pred = tf.keras.layers.Lambda(lambda x: tf.cast(
-            tf.greater_equal(x, detection_threshold), tf.int32), name="Afdsafs")(prob)
+        self.prob = prob
+        pred = Threshold(config['detection_threshold'])(prob)
         # pred = tf.cast(tf.greater_equal(prob, detection_threshold), tf.int32)
 
         model = tf.keras.Model(inputs=inputs, outputs=pred)
 
-        # Define a custom loss function that computes the loss based on the logits layer
-        def custom_loss(y_true, y_pred):
-            return tf.keras.losses.MeanSquaredError()(y_true, prob)
-            # logits = model.layers[-2].output  # Get the logits layer
-            # logits = prob
-            # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
-            #     labels=y_true, logits=logits))
-            # return loss
-
         # Compile the model with the custom loss function
-        model.compile(optimizer='adam', loss=custom_loss)
+        model.compile(optimizer='adam', loss=self._loss)
 
         return model
+
+    def _loss(self, y_true, y_pred):
+        # TODO: This has state which will probably break with load().
+        return tf.keras.losses.MeanSquaredError()(y_true, self.prob)

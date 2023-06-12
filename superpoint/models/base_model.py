@@ -67,6 +67,10 @@ class BaseModel(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def _loss(self, y_true, y_pred):
+        raise NotImplementedError
+
     def __init__(self, mode, data={}, n_gpus=1, data_shape=None, **config):
         self.datasets = data
         self.data_shape = data_shape
@@ -109,7 +113,7 @@ class BaseModel(metaclass=ABCMeta):
             log_dir=log_dir, histogram_freq=1)
 
         self.model.fit(self.datasets["training"].map(
-            lambda data: (data["image"], data["keypoint_map"])).batch(100).take(3),
+            lambda data: (data["image"], data["keypoint_map"])).batch(100).take(10),
             callbacks=[tensorboard_callback])
 
         # Old tensorflow 1 code:
@@ -195,11 +199,14 @@ class BaseModel(metaclass=ABCMeta):
         return metrics
 
     def load(self, path):
-        logging.info('Saving model')
-        # self.model.save(path)
-        self.model.load_weights(path / "weights")
+        logging.info('Loading model')
+        self.model = tf.keras.models.load_model(path, {
+            # TODO: Not sure this is correct, see TODO about loss.
+            '_loss': self._loss
+        })
+        # self.model.load_weights(path / "weights")
 
     def save(self, path):
         logging.info('Saving model')
-        # self.model.save(path)
-        self.model.save_weights(path / "weights")
+        self.model.save(path)
+        # self.model.save_weights(path / "weights")

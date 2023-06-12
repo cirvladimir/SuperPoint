@@ -5,9 +5,44 @@ from .backbones.vgg import vgg_block
 
 
 @tf.function(experimental_compile=True)
-def my_depth_to_space(x, config, cfirst):
-    return tf.nn.depth_to_space(
-        x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
+def my_depth_to_space(x, grid_size, data_format):
+    return tf.nn.depth_to_space(x, grid_size, data_format=data_format)
+
+
+class DepthToSpace(tf.keras.layers.Layer):
+    def __init__(self, grid_size, data_format, **kwargs):
+        super().__init__(**kwargs)
+        self.grid_size = grid_size
+        self.data_format = data_format
+
+    def call(self, inputs):
+        return my_depth_to_space(
+            inputs, self.grid_size, data_format=self.data_format)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "grid_size": self.grid_size,
+            "data_format": self.data_format
+        })
+        return config
+
+
+class Squeeze(tf.keras.layers.Layer):
+    def __init__(self, axis, **kwargs):
+        super().__init__(**kwargs)
+        self.axis = axis
+
+    def call(self, inputs):
+        return tf.squeeze(
+            inputs, axis=self.axis)
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({
+            "axis": self.axis
+        })
+        return config
 
 
 def detector_head(inputs, **config):
@@ -29,13 +64,11 @@ def detector_head(inputs, **config):
         prob = prob[:, :-1, :, :]
     else:
         prob = prob[:, :, :, :-1]
-    # prob = tf.keras.layers.Lambda(lambda x: tf.nn.depth_to_space(
-    #     x, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC'))(prob)
-    prob = tf.keras.layers.Lambda(lambda x: my_depth_to_space(x, config, cfirst))(prob)
-    # prob = tf.depth_to_space(
-    #     prob, config['grid_size'], data_format='NCHW' if cfirst else 'NHWC')
+
+    prob = DepthToSpace(config['grid_size'], 'NCHW' if cfirst else 'NHWC')(prob)
+
     # prob = tf.squeeze(prob, axis=cindex)
-    prob = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=cindex))(prob)
+    prob = Squeeze(cindex)(prob)
 
     # return {'logits': x, 'prob': prob}
     return prob

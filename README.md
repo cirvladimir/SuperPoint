@@ -216,17 +216,37 @@ I'm running this command:
 python3.11 experiment.py train configs/magic-point_shapes.yaml magic-point_synth
 ```
 
-It passes data generation stuff, and fails on model.
+I'm currently just trying to train MagicPoint.
 
-I still have to rewrite the model into the tensorflow 2 paradigm.
+Current problems:
 
-There are three ways to make keras models. I'm going with the functional way. See this: https://pyimagesearch.com/2019/10/28/3-ways-to-create-a-keras-model-with-tensorflow-2-0-sequential-functional-and-model-subclassing/
+2. I need to get non-max supressions working
 
-So far I think most of BaseModel is unnecessary. However, I'm still keeping it.
+3. I need to do the proper loss function.
 
-Update 6/11/2023:
+### Non-critical TODOs
 
-Base model is indeed unnecessary, I basically scaped most of it and am just calling _model().train(). Eventually I should completely get rid of it.
+* Todo: experiment with chanels first vs last
+* Get rid of BaseModel
+
+### General
+
+* Remember to install python3.11.
+* export TMPDIR=/tmp
+
+### Possible errors
+
+### Findings log
+
+#### model.save not working
+
+For some reason model.save() isn't working.
+
+The issues was being caused by lambda layers. These are not saveable.
+
+Looks like I will have to subclass Layer instead of using lambda.
+
+#### MagicPoint questions
 
 My next question is how the head of the model (different during evaluation and training) is supposed to look. Currently there's a softmax being applied. As far as I know, 1) softmax shouldn't be there during training 2) softmax selects 1 class out of a probability list of many classes, while I actually want to select multiple classes. Multiple classes are multiple keypoints on the image.
 
@@ -235,10 +255,3 @@ This github issue was really helpful: https://github.com/rpautrat/SuperPoint/iss
 Answer for 1: I think that we DO want the softmax during training. The whole point of it is that it has a gradient. If we just cared about choosing a class, we would use argmax, which just selects the highest number. However argmax isn't differentiable.
 
 Answers from the issue on 2: We softmax it to help with normalization during training. The original image HxW becomes (H/8)x(W/8)x65, we sort of take each 8x8 patch and make it into one channel. We apply softmax per pixel in this (H/8)x(W/8) image. This sort of says that there should only be one descriptor per patch. However, we threshold the probability for a pixel to be a keypoint by 1/64, so we can still have multiple keypoints per 8x8 patch. Although this whole architecture is a little weird in my opinions.
-
-### General
-
-* Remember to install python3.11.
-* export TMPDIR=/tmp
-
-### Possible errors
