@@ -23,7 +23,14 @@ import tensorflow as tf  # noqa: E402
 from models.base_model import Mode
 
 
-def train(config, n_iter, output_dir, pretrained_dir=None):
+def train(config, n_iter, output_dir: Path, pretrained_dir=None):
+    checkpoints_path = output_dir / "checkpoints"
+
+    last_checkpoint = None
+    checkpoint_ind = 0
+    while (checkpoints_path / str(checkpoint_ind)).exists():
+        last_checkpoint = checkpoints_path / str(checkpoint_ind)
+        checkpoint_ind += 1
 
     set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
 
@@ -32,18 +39,22 @@ def train(config, n_iter, output_dir, pretrained_dir=None):
     model = get_model(config['model']['name'])(Mode.TRAIN,
         dataset.get_tf_datasets(), **config['model'])
 
-    if pretrained_dir is not None:
-        model.load(pretrained_dir)
+    if last_checkpoint is not None:
+        model.load_checkpoint(str(last_checkpoint))
+
     try:
-        model.train(n_iter, output_dir=str(output_dir),
-                    validation_interval=config.get('validation_interval', 100),
-                    save_interval=config.get('save_interval', None),
-                    checkpoint_path=None,
-                    keep_checkpoints=config.get('keep_checkpoints', 1))
+        while True:
+            model.train(n_iter, output_dir=str(output_dir),
+                        validation_interval=config.get('validation_interval', 100),
+                        save_interval=config.get('save_interval', None),
+                        checkpoint_path=None,
+                        keep_checkpoints=config.get('keep_checkpoints', 1))
+            model.save_checkpoint(str(checkpoints_path / str(checkpoint_ind)))
+            model.save(output_dir / "saved_model")
+            checkpoint_ind += 1
     except KeyboardInterrupt:
         logging.info('Got Keyboard Interrupt, saving model and closing.')
-
-    model.save(output_dir / "saved_model")
+        model.save(output_dir / "saved_model")
 
 
 def evaluate(config, output_dir, n_iter=None):
@@ -86,14 +97,7 @@ def _cli_train(config, output_dir, args):
     with open(os.path.join(output_dir, 'config.yml'), 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
 
-    if args.pretrained_model is not None:
-        pretrained_dir = os.path.join(EXPER_PATH, args.pretrained_model)
-        if not os.path.exists(pretrained_dir):
-            raise ValueError("Missing pretrained model: " + pretrained_dir)
-    else:
-        pretrained_dir = None
-
-    train(config, config['train_iter'], Path(output_dir), pretrained_dir)
+    train(config, config['train_iter'], Path(output_dir))
 
     if args.eval:
         _cli_eval(config, output_dir, args)
@@ -134,7 +138,6 @@ if __name__ == '__main__':
     p_train.add_argument('config', type=str)
     p_train.add_argument('exper_name', type=str)
     p_train.add_argument('--eval', action='store_true')
-    p_train.add_argument('--pretrained_model', type=str, default=None)
     p_train.set_defaults(func=_cli_train)
 
     # Evaluation command

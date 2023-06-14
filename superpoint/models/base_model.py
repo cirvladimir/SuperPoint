@@ -113,8 +113,8 @@ class BaseModel(metaclass=ABCMeta):
             log_dir=log_dir, histogram_freq=1)
 
         self.model.fit(self.datasets["training"].map(
-            lambda data: (data["image"], data["keypoint_map"])).batch(100).take(10),
-            callbacks=[tensorboard_callback])
+            lambda data: (data["image"], data["keypoint_map"])).shuffle(3000).batch(100),
+            callbacks=[tensorboard_callback], epochs=1)
 
         # Old tensorflow 1 code:
         # for i in range(iterations):
@@ -210,3 +210,11 @@ class BaseModel(metaclass=ABCMeta):
         logging.info('Saving model')
         self.model.save(path)
         # self.model.save_weights(path / "weights")
+
+    def load_checkpoint(self, path):
+        logging.info('Loading model')
+        self.model.load_weights(path)
+
+    def save_checkpoint(self, path):
+        logging.info('Saving model')
+        self.model.save_weights(path)
