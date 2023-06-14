@@ -29,15 +29,17 @@ def train(config, n_iter, output_dir: Path, pretrained_dir=None):
     last_checkpoint = None
     checkpoint_ind = 0
     while (checkpoints_path / str(checkpoint_ind)).exists():
-        last_checkpoint = checkpoints_path / str(checkpoint_ind)
+        last_checkpoint = checkpoints_path / str(checkpoint_ind) / "checkpoint"
         checkpoint_ind += 1
 
     set_seed(config.get('seed', int.from_bytes(os.urandom(4), byteorder='big')))
 
     dataset = get_dataset(config['data']['name'])(**config['data'])
     print(dataset.get_training_set().element_spec)
+
+    datasets = dataset.get_tf_datasets()
     model = get_model(config['model']['name'])(Mode.TRAIN,
-        dataset.get_tf_datasets(), **config['model'])
+        datasets, **config['model'])
 
     if last_checkpoint is not None:
         model.load_checkpoint(str(last_checkpoint))
@@ -49,7 +51,7 @@ def train(config, n_iter, output_dir: Path, pretrained_dir=None):
                         save_interval=config.get('save_interval', None),
                         checkpoint_path=None,
                         keep_checkpoints=config.get('keep_checkpoints', 1))
-            model.save_checkpoint(str(checkpoints_path / str(checkpoint_ind)))
+            model.save_checkpoint(str(checkpoints_path / str(checkpoint_ind)  / "checkpoint"))
             model.save(output_dir / "saved_model")
             checkpoint_ind += 1
     except KeyboardInterrupt:
