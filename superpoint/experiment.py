@@ -160,7 +160,7 @@ if __name__ == '__main__':
         config = yaml.load(f, yaml.FullLoader)
     output_dir = os.path.join(EXPER_PATH, args.exper_name)
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        Path(output_dir).mkdir(parents=True)
 
     with capture_outputs(os.path.join(output_dir, 'log')):
         logging.info('Running command {}'.format(args.command.upper()))
