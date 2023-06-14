@@ -25,6 +25,10 @@ class Threshold(tf.keras.layers.Layer):
         })
         return config
 
+@tf.function(experimental_compile=True)
+def my_space_to_depth(x, grid_size, data_format):
+    return tf.nn.space_to_depth(x, grid_size, data_format=data_format)
+
 
 class MagicPoint(BaseModel):
     input_spec = {
@@ -45,6 +49,7 @@ class MagicPoint(BaseModel):
         config = dict_update(self.default_config,
                              config)
         config['training'] = (mode == Mode.TRAIN)
+        self.config = config
 
         inputs = tf.keras.Input(shape=(None, None, 1))
 
@@ -60,16 +65,16 @@ class MagicPoint(BaseModel):
         if (mode == Mode.PRED) and config['homography_adaptation']['num']:
             prob = homography_adaptation(image, net, config['homography_adaptation'])
         else:
-            prob = net(image)
+            softmax, prob = net(image)
 
-        # TODO: Make non-maximum supporession work
+        # TODO: Make non-maximum supporession work (it's not used during training though)
         # if config['nms']:
         #     prob = box_nms(prob, config['nms'],
         #                    min_prob=config['detection_threshold'],
         #                    keep_top_k=config['top_k'])
         # print(prob)
         # print(type(prob))
-        self.prob = prob
+        self.prob = softmax
         pred = Threshold(config['detection_threshold'])(prob)
         # pred = tf.cast(tf.greater_equal(prob, detection_threshold), tf.int32)
 
@@ -81,5 +86,18 @@ class MagicPoint(BaseModel):
         return model
 
     def _loss(self, y_true, y_pred):
+        # cfirst = self.config['data_format'] == 'channels_first'
+        cfirst = False
         # TODO: This has state which will probably break with load().
-        return tf.keras.losses.MeanSquaredError()(y_true, self.prob)
+        float_map = tf.cast(y_true[..., tf.newaxis], tf.float32)
+        binned = my_space_to_depth(float_map, self.config['grid_size'],
+                                   'NCHW' if cfirst else 'NHWC')
+        shape = tf.concat([tf.shape(binned)[:3], [1]], axis=0)
+        labels = tf.concat([binned, tf.ones(shape)], axis=3)
+        argmax = tf.argmax(labels + tf.random.uniform(tf.shape(labels), 0, 0.1),
+                       axis=3)
+        return tf.keras.losses.sparse_categorical_crossentropy(argmax,
+                                                            self.prob,
+                                                            True,
+                                                            axis=(1 if self.config['data_format'] == 'channels_first' else 3))
+        # return tf.keras.losses.MeanSquaredError()(y_true, self.prob)

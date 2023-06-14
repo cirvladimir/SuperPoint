@@ -57,13 +57,13 @@ def detector_head(inputs, **config):
     x = vgg_block(x, 1 + pow(config['grid_size'], 2), 1,
                   activation=None, **params_conv)
 
-    prob = tf.keras.layers.Softmax(axis=cindex)(x)
+    softmax = tf.keras.layers.Softmax(axis=cindex)(x)
     # Strip the extra “no interest point” dustbin
     # prob = prob[:, :-1, :, :] if cfirst else prob[:, :, :, :-1]
     if cfirst:
-        prob = prob[:, :-1, :, :]
+        prob = softmax[:, :-1, :, :]
     else:
-        prob = prob[:, :, :, :-1]
+        prob = softmax[:, :, :, :-1]
 
     prob = DepthToSpace(config['grid_size'], 'NCHW' if cfirst else 'NHWC')(prob)
 
@@ -71,7 +71,7 @@ def detector_head(inputs, **config):
     prob = Squeeze(cindex)(prob)
 
     # return {'logits': x, 'prob': prob}
-    return prob
+    return (softmax, prob)
 
 
 def descriptor_head(inputs, **config):
