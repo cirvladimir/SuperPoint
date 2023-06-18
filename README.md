@@ -213,7 +213,7 @@ This implementation was developed by [Rémi Pautrat](https://github.com/rpautrat
 I'm running this command:
 
 ```
-python3.11 experiment.py train configs/magic-point_shapes.yaml magic-point_synth
+python3 experiment.py train configs/magic-point_shapes.yaml magic-point_synth
 ```
 
 I'm currently just trying to train MagicPoint.

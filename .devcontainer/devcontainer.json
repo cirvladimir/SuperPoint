@@ -1,7 +1,11 @@
 {
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "gpu.Dockerfile"
     },
+    "runArgs": [
+        "--gpus",
+        "all",
+    ],
     "mounts": [
         "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind",
         "source=superpoint-bashhistory,target=/commandhistory,type=volume"
