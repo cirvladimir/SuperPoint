@@ -54,6 +54,8 @@ def train(config, n_iter, output_dir: Path, pretrained_dir=None):
             model.save_checkpoint(str(checkpoints_path / str(checkpoint_ind)  / "checkpoint"))
             model.save(output_dir / "saved_model")
             checkpoint_ind += 1
+            # For now there seems to be some error with this and GPUs. The program hangs on the second step.
+            break
     except KeyboardInterrupt:
         logging.info('Got Keyboard Interrupt, saving model and closing.')
         model.save(output_dir / "saved_model")
